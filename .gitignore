@@ -1,0 +1,18 @@
+# build outputs
+build/
+.gradle/
+out/
+
+# dev runtime
+run/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# system
+.DS_Store
+Thumbs.db

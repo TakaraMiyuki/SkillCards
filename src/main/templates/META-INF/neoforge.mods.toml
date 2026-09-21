@@ -1,0 +1,46 @@
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+
+# The authors of the mod, displayed in the mod UI
+authors="${mod_authors}"
+description='''
+技能卡（SkillCards）：14 张主动技能卡（普通/稀有/彩卡/黑卡），与"猎人游戏 Manhunt"联动。
+手持卡片右键发动技能，按稀有度与效果共享冷却。卡片可在创造模式物品栏"技能卡"标签页获取。
+(SkillCards: 14 active skill cards that integrate with the Manhunt gamemode. Right-click a card to cast it.)
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+# 联动模组：提供"猎人"阵营与追踪罗盘。缺失时本模组仍可加载，
+# 但所有以"猎人"为目标的卡片将找不到目标（自身增益类卡片不受影响）。
+[[dependencies.${mod_id}]]
+    modId="manhunt"
+    type="optional"
+    versionRange="[0.1.1,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# 联动模组（可选）：提供"飞翔"状态效果。海王之翼依赖它发动；
+# 缺失时该卡提示无法使用且不进冷却，其余卡片不受影响。
+[[dependencies.${mod_id}]]
+    modId="flying_enchant"
+    type="optional"
+    versionRange="[1.2.0,)"
+    ordering="NONE"
+    side="BOTH"
