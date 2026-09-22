@@ -83,7 +83,8 @@ public final class CardConfig {
     // ==================== 赤鳞之跃动：永久+4生命上限 / 永久-2饥饿上限，可叠加 ====================
     public static final double CHILIN_HEALTH_BONUS_PER_USE = 4.0;
     public static final int CHILIN_HUNGER_CAP_REDUCTION_PER_USE = 2;
-    public static final int CHILIN_HUNGER_CAP_FLOOR = 0; // 饥饿上限最低钳到0
+    public static final int CHILIN_HUNGER_CAP_FLOOR = 18; // 饥饿上限钳到18为止——原版自然回血需要饥饿≥18，
+    // 钳得再低会导致玩家永远无法自然回血（与 Manhunt 联动实测反馈）
 
     // ==================== 纱幕：原地黑灰烟雾团 ====================
     public static final double SHAMU_SMOKE_RADIUS = 6.0;       // 烟雾团半径（格）
