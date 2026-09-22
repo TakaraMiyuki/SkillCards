@@ -81,10 +81,16 @@ public final class CardConfig {
     public static final int SHENGSHU_WEAKNESS_AMPLIFIER = 1; // 等级2
 
     // ==================== 赤鳞之跃动：永久+4生命上限 / 永久-2饥饿上限，可叠加 ====================
-    public static final double CHILIN_HEALTH_BONUS_PER_USE = 4.0;
-    public static final int CHILIN_HUNGER_CAP_REDUCTION_PER_USE = 2;
-    public static final int CHILIN_HUNGER_CAP_FLOOR = 18; // 饥饿上限钳到18为止——原版自然回血需要饥饿≥18，
-    // 钳得再低会导致玩家永远无法自然回血（与 Manhunt 联动实测反馈）
+    /** 赤鳞之跃动：发动扣除的生命值（现值不足则扣至最后 2 点）。 */
+    public static final float CHILIN_HEALTH_COST = 20.0F;
+    /** 赤鳞之跃动：扣血保留的最低生命值。 */
+    public static final float CHILIN_MIN_HEALTH = 2.0F;
+    /** 赤鳞之跃动：每段扣血量（分段掉血营造连续受击感）。 */
+    public static final float CHILIN_DRAIN_CHUNK_HP = 2.0F;
+    /** 赤鳞之跃动：分段扣血的间隔（刻）。 */
+    public static final int CHILIN_DRAIN_INTERVAL_TICKS = 2;
+    /** 赤鳞之跃动：强化持续时间（秒）。 */
+    public static final int CHILIN_BUFF_SECONDS = 30;
 
     // ==================== 纱幕：原地黑灰烟雾团 ====================
     public static final double SHAMU_SMOKE_RADIUS = 6.0;       // 烟雾团半径（格）

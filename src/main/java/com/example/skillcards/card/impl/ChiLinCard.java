@@ -1,32 +1,44 @@
 package com.example.skillcards.card.impl;
 
 import com.example.skillcards.CardConfig;
+import com.example.skillcards.card.ActiveStates;
 import com.example.skillcards.card.CardFx;
-import com.example.skillcards.data.CardState;
 import com.example.skillcards.registry.Card;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 赤鳞之跃动：使用后永久降低2点饥饿值上限、永久提升4点生命值上限（2颗心），可叠加。
- * 通过持久化附加数据（Attachment，copyOnDeath）跨死亡与重登保留，并在登录/重生/换维度时重挂属性修饰符。
+ * 赤鳞之跃动：发动后快速损失 20 点生命值（分段掉血、保留最后 2 点，呈现连续受击感），
+ * 获得 30 秒的速度 2 / 力量 2 / 夜视 / 急迫 3 / 跳跃提升 1；持续期间身上散发红色粒子。
  */
 public final class ChiLinCard {
     private ChiLinCard() {}
 
-    public static final Identifier CRIMSON_HEALTH_ID =
-        Identifier.fromNamespaceAndPath("skillcards", "chilin_health");
-
     public static boolean activate(ServerPlayer player) {
-        int uses = player.getData(CardState.CRIMSON_USES) + 1;
-        player.setData(CardState.CRIMSON_USES, uses);
-        applyModifiers(player, uses);
+        // 分段扣血：目标 = max(当前生命 - 20, 2)（扣至最后 2 点生命，不会致死）
+        float health = player.getHealth();
+        float target = Math.max(health - CardConfig.CHILIN_HEALTH_COST, CardConfig.CHILIN_MIN_HEALTH);
+        if (target < health) {
+            int chunks = net.minecraft.util.Mth.ceil((health - target) / CardConfig.CHILIN_DRAIN_CHUNK_HP);
+            ActiveStates.scheduleCrimsonDrain(player.getUUID(), chunks, target);
+        }
+
+        // 30 秒强化：速度2 / 力量2 / 夜视 / 急迫3 / 跳跃提升1
+        int dur = CardConfig.CHILIN_BUFF_SECONDS * 20;
+        long now = ActiveStates.now();
+        buff(player, MobEffects.SPEED, dur, 1);
+        buff(player, MobEffects.STRENGTH, dur, 1);
+        buff(player, MobEffects.NIGHT_VISION, dur, 0);
+        buff(player, MobEffects.HASTE, dur, 2);
+        buff(player, MobEffects.JUMP_BOOST, dur, 0);
+        ActiveStates.setCrimsonAura(player.getUUID(), now + dur);
+        ActiveStates.scheduleEndHint(player.getUUID(), Card.CHILIN, now + dur);
 
         Vec3 front = CardFx.frontPos(player);
         CardFx.sound(player.level(), player.getX(), player.getY(), player.getZ(), SoundEvents.TOTEM_USE);
@@ -36,32 +48,39 @@ public final class ChiLinCard {
         return true;
     }
 
-    /** 按使用次数重挂生命上限修饰符（登录/重生/换维度/使用时调用）。 */
-    public static void applyModifiers(ServerPlayer player, int uses) {
-        AttributeInstance health = player.getAttribute(Attributes.MAX_HEALTH);
-        if (health == null) {
-            return;
+    private static void buff(ServerPlayer player, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect, int dur, int amp) {
+        player.addEffect(new MobEffectInstance(effect, dur, amp), null);
+    }
+
+    /**
+     * 单段扣血（CardEvents 每 2 刻调用一次）：直接扣减生命值并播放受击表现
+     * （受击动画包 + 受击音效），返回是否仍高于目标（需要继续扣）。
+     */
+    public static boolean drainChunk(ServerPlayer player, float targetHealth) {
+        float health = player.getHealth();
+        if (health <= targetHealth + 0.01F || player.isDeadOrDying()) {
+            return false;
         }
-        health.removeModifier(CRIMSON_HEALTH_ID);
-        if (uses > 0) {
-            health.addPermanentModifier(new AttributeModifier(CRIMSON_HEALTH_ID,
-                CardConfig.CHILIN_HEALTH_BONUS_PER_USE * uses, AttributeModifier.Operation.ADD_VALUE));
+        player.setHealth(Math.max(targetHealth, health - CardConfig.CHILIN_DRAIN_CHUNK_HP));
+        if (player.level() instanceof ServerLevel level) {
+            level.broadcastDamageEvent(player, player.damageSources().magic());
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 0.7F, 0.9F + net.minecraft.util.RandomSource.create().nextFloat() * 0.2F);
         }
-        if (player.getHealth() > player.getMaxHealth()) {
-            player.setHealth(player.getMaxHealth());
+        return player.getHealth() > targetHealth + 0.01F;
+    }
+
+    /** 红色粒子光环（CardEvents 周期调用）。 */
+    public static void spawnAura(ServerPlayer player) {
+        if (player.level() instanceof ServerLevel level) {
+            level.sendParticles(CardFx.RED, player.getX(), player.getY() + 0.9, player.getZ(),
+                5, 0.35, 0.6, 0.35, 0.01);
         }
     }
 
-    /** 当前饥饿值上限：20 - 2 x 使用次数。 */
-    public static int hungerCap(ServerPlayer player) {
-        int uses = player.getData(CardState.CRIMSON_USES);
-        int cap = 20 - CardConfig.CHILIN_HUNGER_CAP_REDUCTION_PER_USE * uses;
-        return Math.max(cap, CardConfig.CHILIN_HUNGER_CAP_FLOOR);
-    }
-
-    /** 管理员指令：重置永久加成（使用次数清零 + 移除属性修饰符）。 */
+    /** 供 Manhunt 每局开始/结束结算：取消进行中的扣血与光环（强化效果由效果清除统一处理）。 */
     public static void reset(ServerPlayer player) {
-        player.setData(CardState.CRIMSON_USES, 0);
-        applyModifiers(player, 0);
+        ActiveStates.clearCrimson(player.getUUID());
+        ActiveStates.cancelEndHint(player.getUUID(), Card.CHILIN);
     }
 }

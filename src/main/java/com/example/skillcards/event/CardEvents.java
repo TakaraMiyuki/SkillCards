@@ -97,7 +97,7 @@ public final class CardEvents {
         tickCurse(now);
         tickSacred(now);
         tickWarpCharge(now);
-        tickHungerClamp(server, now);
+        tickCrimson(server, now);
         tickEndHints(now);
         tickCooldownReady(server, now);
         tickSmokeZones(server, now);
@@ -242,19 +242,45 @@ public final class CardEvents {
         }
     }
 
-    /** 赤鳞之跃动：把饥饿值钳制在 20 - 2 x 使用次数以内。 */
-    private static void tickHungerClamp(MinecraftServer server, long now) {
-        if (now % 10 != 0) {
-            return;
-        }
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            int uses = player.getData(CardState.CRIMSON_USES);
-            if (uses <= 0) {
+    /** 赤鳞之跃动：分段扣血推进 + 红色粒子光环。 */
+    private static void tickCrimson(MinecraftServer server, long now) {
+        var drains = ActiveStates.crimsonDrains();
+        var iterator = drains.entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ActiveStates.CrimsonDrain task = entry.getValue();
+            if (now < task.nextTick()) {
                 continue;
             }
-            int cap = ChiLinCard.hungerCap(player);
-            if (player.getFoodData().getFoodLevel() > cap) {
-                player.getFoodData().setFoodLevel(cap);
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null || player.isDeadOrDying()) {
+                iterator.remove();
+                continue;
+            }
+            boolean more = ChiLinCard.drainChunk(player, task.targetHealth());
+            if (more && task.chunksLeft() > 1) {
+                drains.put(entry.getKey(), new ActiveStates.CrimsonDrain(
+                    task.chunksLeft() - 1, task.targetHealth(), now + CardConfig.CHILIN_DRAIN_INTERVAL_TICKS));
+            } else {
+                iterator.remove();
+            }
+        }
+
+        if (now % 10 == 0) {
+            var auras = ActiveStates.crimsonAuras();
+            var auraIterator = auras.entrySet().iterator();
+            while (auraIterator.hasNext()) {
+                var entry = auraIterator.next();
+                if (now >= entry.getValue()) {
+                    auraIterator.remove();
+                    continue;
+                }
+                ServerPlayer player = ActiveStates.player(entry.getKey());
+                if (player == null) {
+                    auraIterator.remove();
+                    continue;
+                }
+                ChiLinCard.spawnAura(player);
             }
         }
     }
@@ -411,32 +437,16 @@ public final class CardEvents {
     // ==================== 赤鳞：永久属性重挂 / 登出清理 ====================
 
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        reapplyCrimson(event.getEntity());
     }
 
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        reapplyCrimson(event.getEntity());
     }
 
     public static void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
-        reapplyCrimson(event.getEntity());
     }
 
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         ActiveStates.clearFor(event.getEntity().getUUID());
     }
 
-    private static void reapplyCrimson(net.minecraft.world.entity.player.Player player) {
-        if (!(player instanceof ServerPlayer serverPlayer)) {
-            return;
-        }
-        int uses = serverPlayer.getData(CardState.CRIMSON_USES);
-        if (uses > 0) {
-            ChiLinCard.applyModifiers(serverPlayer, uses);
-            int cap = ChiLinCard.hungerCap(serverPlayer);
-            if (serverPlayer.getFoodData().getFoodLevel() > cap) {
-                serverPlayer.getFoodData().setFoodLevel(cap);
-            }
-        }
-    }
 }

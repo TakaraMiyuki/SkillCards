@@ -32,12 +32,17 @@ public final class ActiveStates {
     private static final Map<UUID, Map<Card, Long>> END_HINTS = new HashMap<>(); // 到期时提示"效果结束"
     private static final Map<UUID, Set<Card>> COOLING = new HashMap<>(); // 冷却完毕提醒的记忆集
     private static final Map<UUID, SmokeZone> SMOKE_ZONES = new HashMap<>(); // 纱幕：原地黑灰烟雾团
+    private static final Map<UUID, CrimsonDrain> CRIMSON_DRAINS = new HashMap<>(); // 赤鳞：进行中的分段扣血
+    private static final Map<UUID, Long> CRIMSON_AURA = new HashMap<>(); // 赤鳞：红色光环到期
 
     /** 纱幕释放的黑灰烟雾团（原地固定，半径/高/时长见 CardConfig）。 */
     public record SmokeZone(ResourceKey<Level> dimension, double x, double y, double z, long expiry) {}
 
     /** 麒麟第二道雷的定时任务。 */
     public record PendingStrike(UUID target, long fireTime) {}
+
+    /** 赤鳞：单次分段扣血任务（剩余段数 / 目标生命 / 下次执行时刻）。 */
+    public record CrimsonDrain(int chunksLeft, float targetHealth, long nextTick) {}
 
     public static void bind(MinecraftServer s) {
         server = s;
@@ -74,6 +79,8 @@ public final class ActiveStates {
         WARP_CHARGE.remove(id);
         END_HINTS.remove(id);
         COOLING.remove(id);
+        CRIMSON_DRAINS.remove(id);
+        CRIMSON_AURA.remove(id);
     }
 
     public static MinecraftServer server() {
@@ -239,6 +246,29 @@ public final class ActiveStates {
 
     public static Map<UUID, SmokeZone> smokeZones() {
         return SMOKE_ZONES;
+    }
+
+    // ==================== 赤鳞之跃动 ====================
+
+    public static void scheduleCrimsonDrain(UUID id, int chunksLeft, float targetHealth) {
+        CRIMSON_DRAINS.put(id, new CrimsonDrain(chunksLeft, targetHealth, now() + 4));
+    }
+
+    public static Map<UUID, CrimsonDrain> crimsonDrains() {
+        return CRIMSON_DRAINS;
+    }
+
+    public static void setCrimsonAura(UUID id, long until) {
+        CRIMSON_AURA.put(id, until);
+    }
+
+    public static Map<UUID, Long> crimsonAuras() {
+        return CRIMSON_AURA;
+    }
+
+    public static void clearCrimson(UUID id) {
+        CRIMSON_DRAINS.remove(id);
+        CRIMSON_AURA.remove(id);
     }
 
     // ==================== 结束提示（有持续时间的卡） ====================
