@@ -290,23 +290,31 @@ public final class CardEvents {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            // current = 背包中仍在冷却的卡；present = 背包中存在的所有技能卡。
+            // 与 Manhunt 技能栏联动：卡可被切出背包存入虚拟技能库——离开背包的卡不播报
+            // "冷却完毕"（否则切卡瞬间会误报），回到背包且冷却结束才播报。
             Set<Card> current = new HashSet<>();
+            Set<Card> present = new HashSet<>();
             var items = player.getInventory().getNonEquipmentItems();
             for (int i = 0; i < items.size(); i++) {
                 ItemStack stack = items.get(i);
-                if (stack.getItem() instanceof SkillCardItem cardItem
-                    && player.getCooldowns().isOnCooldown(stack)) {
-                    current.add(cardItem.card());
+                if (stack.getItem() instanceof SkillCardItem cardItem) {
+                    present.add(cardItem.card());
+                    if (player.getCooldowns().isOnCooldown(stack)) {
+                        current.add(cardItem.card());
+                    }
                 }
             }
             ItemStack offhand = player.getItemInHand(InteractionHand.OFF_HAND);
-            if (offhand.getItem() instanceof SkillCardItem offhandCard
-                && player.getCooldowns().isOnCooldown(offhand)) {
-                current.add(offhandCard.card());
+            if (offhand.getItem() instanceof SkillCardItem offhandCard) {
+                present.add(offhandCard.card());
+                if (player.getCooldowns().isOnCooldown(offhand)) {
+                    current.add(offhandCard.card());
+                }
             }
             Set<Card> previous = ActiveStates.cooling(player.getUUID());
             for (Card card : previous) {
-                if (!current.contains(card)) {
+                if (!current.contains(card) && present.contains(card)) {
                     CardFx.announce(player, "冷却完毕", card);
                     CardFx.sound(player.level(), player.getX(), player.getY(), player.getZ(), CardFx.READY_SOUND);
                 }
