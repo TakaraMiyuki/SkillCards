@@ -35,7 +35,7 @@ public enum Card {
     SANSHI("sanshi", Grade.RARE, 300, SanShiCard::activate),
     MANGDIAN("mangdian", Grade.RARE, 300, MangDianCard::activate),
 
-    HAIWANG("haiwang", Grade.RAINBOW, 180, HaiWangCard::activate),
+    HAIWANG("haiwang", Grade.RAINBOW, 120, HaiWangCard::activate),
     YASITI("yasiti", Grade.RARE, 300, YaSiTiCard::activate),
 
     ZUZHOU("zuzhou", Grade.BLACK, 300, ZuZhouCard::activate),
