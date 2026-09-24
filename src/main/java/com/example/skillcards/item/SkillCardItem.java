@@ -38,6 +38,12 @@ public class SkillCardItem extends Item {
         return card;
     }
 
+    /** 所有技能卡附带附魔光效。 */
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return true;
+    }
+
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);

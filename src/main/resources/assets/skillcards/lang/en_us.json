@@ -51,6 +51,6 @@
   "item.skillcards.shengshu.brief": "Lasting regeneration, at the cost of attack damage",
   "item.skillcards.shengshu.desc": "Grants Regeneration III for 60 seconds; also Weakness II during the effect",
   "item.skillcards.chilin": "Chilin zhi Yuedong (Crimson Scale's Leap)",
-  "item.skillcards.chilin.brief": "Permanently gain health, permanently lose hunger",
-  "item.skillcards.chilin.desc": "Permanently lowers hunger by 2; permanently raises max health by 4"
+  "item.skillcards.chilin.brief": "Sacrifice health for boosted abilities",
+  "item.skillcards.chilin.desc": "Rapidly drains 20 health in chunks (keeps the last 2, cannot kill), grants Speed II, Strength II, Night Vision, Haste III and Jump Boost I for 30 seconds"
 }

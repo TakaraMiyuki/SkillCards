@@ -51,6 +51,6 @@
   "item.skillcards.shengshu.brief": "获得持久的恢复能力，但略微减少攻击力",
   "item.skillcards.shengshu.desc": "使用后自己获得生命恢复3，持续60秒；期间内获得虚弱2",
   "item.skillcards.chilin": "赤鳞之跃动",
-  "item.skillcards.chilin.brief": "永久提升生命值，但永久降低饥饿值",
-  "item.skillcards.chilin.desc": "使用后自己永久降低2点饱食度；永久提升4点生命值"
+  "item.skillcards.chilin.brief": "损失生命值，强化身体机能",
+  "item.skillcards.chilin.desc": "使用后分段快速损失20点生命值（保留最后2点，不会致死），获得速度2、力量2、夜视、急迫3、跳跃提升1，持续30秒"
 }
