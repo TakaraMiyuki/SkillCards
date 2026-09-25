@@ -368,13 +368,17 @@ public final class CardEvents {
                 continue;
             }
             RandomSource random = level.getRandom();
-            for (int i = 0; i < 14; i++) {
+            // 三种烟雾粒子铺满烟雾区，形成完全遮挡视野的烟墙
+            ParticleOptions[] types = {
+                ParticleTypes.CAMPFIRE_COSY_SMOKE, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, ParticleTypes.GUST
+            };
+            for (int i = 0; i < 26; i++) {
                 double angle = random.nextDouble() * Math.PI * 2;
                 double dist = Math.sqrt(random.nextDouble()) * CardConfig.SHAMU_SMOKE_RADIUS;
                 double x = zone.x() + Math.cos(angle) * dist;
                 double z = zone.z() + Math.sin(angle) * dist;
                 double y = zone.y() + random.nextDouble() * CardConfig.SHAMU_SMOKE_HEIGHT;
-                ParticleOptions type = random.nextDouble() < 0.6 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.SMOKE;
+                ParticleOptions type = types[random.nextInt(types.length)];
                 level.sendParticles(type, x, y, z, 1, 0.05, 0.04, 0.05, 0.01);
             }
             if (now % 10 == 0) { // 地面灰尘环，标出烟雾范围

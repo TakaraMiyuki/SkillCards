@@ -13,7 +13,7 @@ public final class CardConfig {
 
     // ==================== 纱幕：周围20格猎人缓慢2 x 2秒 + 失明 x 10秒 ====================
     public static final int SHAMU_RADIUS = 20;
-    public static final int SHAMU_SLOWNESS_DURATION_TICKS = 2 * 20;
+    public static final int SHAMU_SLOWNESS_DURATION_TICKS = 5 * 20;
     public static final int SHAMU_SLOWNESS_AMPLIFIER = 1; // 等级2
     public static final int SHAMU_BLINDNESS_DURATION_TICKS = 10 * 20;
 

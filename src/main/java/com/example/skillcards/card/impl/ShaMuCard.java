@@ -40,10 +40,10 @@ public final class ShaMuCard {
         // 黑灰烟雾扩散（加强：五层大烟环 + 大团烟雾）
         for (double radius : new double[] {1.5, 4.0, 8.0, 13.0, 18.0}) {
             CardFx.ring(level, front.x, front.y, front.z, radius,
-                Math.max(12, (int) (radius * 2.2)), ParticleTypes.LARGE_SMOKE);
+                Math.max(12, (int) (radius * 2.2)), ParticleTypes.CAMPFIRE_COSY_SMOKE);
         }
-        CardFx.burst(level, front.x, front.y, front.z, ParticleTypes.LARGE_SMOKE, 60, 1.5, 0.12);
-        CardFx.burst(level, front.x, front.y, front.z, ParticleTypes.SMOKE, 90, 1.8, 0.15);
+        CardFx.burst(level, front.x, front.y, front.z, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, 60, 1.5, 0.12);
+        CardFx.burst(level, front.x, front.y, front.z, ParticleTypes.GUST, 50, 1.8, 0.15);
         // 原地黑灰烟雾团：半径6格、高4格、持续30秒（由每刻扫描渲染）
         ActiveStates.addSmokeZone(player.level().dimension(),
             player.getX(), player.getY(), player.getZ(),

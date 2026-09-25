@@ -63,12 +63,14 @@ public final class SanShiCard {
         return true;
     }
 
-    /** 偷到的物品进自己背包（满了掉脚边）。 */
+    /** 偷到的物品进自己背包（满了掉脚边）。返回展示用副本——
+     *  入包时 add 会因合并收缩传入堆叠，必须在合并前截取名称，否则提示会显示“空气”。 */
     private static ItemStack finishSteal(ServerPlayer player, ItemStack stack, Runnable remove) {
         ItemStack stolen = stack.copy();
         remove.run();
-        if (!player.getInventory().add(stolen)) {
-            player.drop(stolen, false);
+        ItemStack moved = stolen.copy(); // 送入背包的副本：add 合并会收缩它
+        if (!player.getInventory().add(moved)) {
+            player.drop(moved, false);
         }
         return stolen;
     }
