@@ -19,7 +19,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 亚丝缇的赐福：末影粒子以玩家身前为中心向内敛聚蓄力 5 秒（可移动、受击不打断，但移速显著降低），
+ * 艾丝缇的赐福：末影粒子以玩家身前为中心向内敛聚蓄力 5 秒（可移动、受击不打断，但移速显著降低），
  * 传送发动前一瞬向外炸开，随后随机传送到大于 200 格、小于 300 格的安全地表。
  */
 public final class YaSiTiCard {

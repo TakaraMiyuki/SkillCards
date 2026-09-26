@@ -24,6 +24,10 @@ public final class MangDianCard {
         player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY,
             CardConfig.MANGDIAN_INVISIBILITY_DURATION_TICKS, 0));
         ActiveStates.setJam(player.getUUID(), ActiveStates.now() + CardConfig.MANGDIAN_JAM_DURATION_TICKS);
+        // 发光抑制：发动即消除自己身上的发光并压制到效果结束（Manhunt 每 40 刻会重挂，需逐刻压制；
+        // 结束后停止压制，由 Manhunt 的增益刷新自动恢复发光）
+        ActiveStates.setGlowSuppress(player.getUUID(), ActiveStates.now() + CardConfig.MANGDIAN_JAM_DURATION_TICKS);
+        player.removeEffect(MobEffects.GLOWING);
         ActiveStates.scheduleEndHint(player.getUUID(), Card.MANGDIAN,
             ActiveStates.now() + CardConfig.MANGDIAN_JAM_DURATION_TICKS);
 

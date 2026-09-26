@@ -68,7 +68,7 @@ public final class CardFx {
     }
 
     /**
-     * 向内敛聚粒子（亚丝缇蓄力）：以 (cx,cy,cz) 为中心，在半径 radius 的球面上生成
+     * 向内敛聚粒子（艾丝缇蓄力）：以 (cx,cy,cz) 为中心，在半径 radius 的球面上生成
      * PORTAL 粒子并向中心收拢（count=0 时偏移参数即速度向量，PortalParticle 会从
      * "生成点+偏移"回落到生成点）。
      */
@@ -105,6 +105,74 @@ public final class CardFx {
             level.sendParticles(dust, player.getX(), y, player.getZ() + t, 1, 0.0, 0.0, 0.0, 0.0);
         }
         ring(level, player.getX(), y, player.getZ(), 0.65, 12, dust);
+    }
+
+    /** 本能模式：声呐扩散环（白色，向外扩至 10 格）。 */
+    public static void sonarRings(ServerLevel level, double x, double y, double z) {
+        for (double r : new double[] {2.5, 5.0, 7.5, 10.0}) {
+            ring(level, x, y, z, r, Math.max(14, (int) (r * 3)), WHITE);
+        }
+    }
+
+    /** 霜凪：目标包围盒 12 条棱的浅蓝色冰晶轮廓。 */
+    public static void frostBox(ServerLevel level, net.minecraft.world.phys.AABB box) {
+        double[][] edges = {
+            {box.minX, box.minY, box.minZ, box.maxX, box.minY, box.minZ},
+            {box.minX, box.maxY, box.minZ, box.maxX, box.maxY, box.minZ},
+            {box.minX, box.minY, box.maxZ, box.maxX, box.minY, box.maxZ},
+            {box.minX, box.maxY, box.maxZ, box.maxX, box.maxY, box.maxZ},
+            {box.minX, box.minY, box.minZ, box.minX, box.maxY, box.minZ},
+            {box.maxX, box.minY, box.minZ, box.maxX, box.maxY, box.minZ},
+            {box.minX, box.minY, box.maxZ, box.minX, box.maxY, box.maxZ},
+            {box.maxX, box.minY, box.maxZ, box.maxX, box.maxY, box.maxZ},
+            {box.minX, box.minY, box.minZ, box.minX, box.minY, box.maxZ},
+            {box.maxX, box.minY, box.minZ, box.maxX, box.minY, box.maxZ},
+            {box.minX, box.maxY, box.minZ, box.minX, box.maxY, box.maxZ},
+            {box.maxX, box.maxY, box.minZ, box.maxX, box.maxY, box.maxZ},
+        };
+        for (double[] e : edges) {
+            for (double t = 0; t <= 1.0; t += 0.25) {
+                level.sendParticles(LIGHT_BLUE,
+                    e[0] + (e[3] - e[0]) * t, e[1] + (e[4] - e[1]) * t, e[2] + (e[5] - e[2]) * t,
+                    1, 0.0, 0.0, 0.0, 0.0);
+            }
+        }
+    }
+
+    /** 隐秘跑鞋：蓝色+金色回旋特效（发动前瞬与落点）。 */
+    public static void rewindSwirl(ServerLevel level, double x, double y, double z) {
+        for (int i = 0; i < 16; i++) {
+            double a = Math.PI * 2 * i / 16;
+            level.sendParticles(LIGHT_BLUE, x + Math.cos(a) * 0.9, y + 0.4 + (i % 2) * 0.5,
+                z + Math.sin(a) * 0.9, 1, 0.0, 0.02, 0.0, 0.0);
+            level.sendParticles(YELLOW, x - Math.cos(a) * 0.6, y + 0.6 + (i % 3) * 0.3,
+                z - Math.sin(a) * 0.6, 1, 0.0, -0.02, 0.0, 0.0);
+        }
+        burst(level, x, y + 1.0, z, ParticleTypes.END_ROD, 15, 0.4, 0.1);
+    }
+
+    /** 新卡环绕粒子样式分发（由每刻扫描调用）。 */
+    public static void orbitStyle(ServerLevel level, ServerPlayer player, String style) {
+        switch (style) {
+            case "diaoyu" -> {
+                orbit(level, player, LIGHT_BLUE, 1.1, 0.02);
+                orbit(level, player, WHITE, 0.9, 0.02);
+                orbit(level, player, GRAY_SMOKE, 1.3, 0.02);
+            }
+            case "qinglong" -> {
+                orbit(level, player, LIGHT_BLUE, 0.6, 0.02);
+                orbit(level, player, YELLOW, 0.9, 0.02);
+                orbit(level, player, LIGHT_BLUE, 1.2, 0.02);
+            }
+            case "huskar" -> {
+                orbit(level, player, RED, 0.5, 0.02);
+                orbit(level, player, ParticleTypes.FLAME, 0.8, 0.02);
+            }
+            case "guozai" -> {
+                orbit(level, player, YELLOW, 0.9, 0.02);
+                orbit(level, player, ParticleTypes.CLOUD, 1.1, 0.02);
+            }
+        }
     }
 
     // ==================== 提示 ====================

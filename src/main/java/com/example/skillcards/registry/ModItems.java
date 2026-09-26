@@ -35,6 +35,13 @@ public final class ModItems {
     public static final DeferredItem<SkillCardItem> ZUZHOU = register(Card.ZUZHOU);
     public static final DeferredItem<SkillCardItem> SHENGSHU = register(Card.SHENGSHU);
     public static final DeferredItem<SkillCardItem> CHILIN = register(Card.CHILIN);
+    public static final DeferredItem<SkillCardItem> BENENG = register(Card.BENENG);
+    public static final DeferredItem<SkillCardItem> SHUANGNI = register(Card.SHUANGNI);
+    public static final DeferredItem<SkillCardItem> PAOXIE = register(Card.PAOXIE);
+    public static final DeferredItem<SkillCardItem> HUSKAR = register(Card.HUSKAR);
+    public static final DeferredItem<SkillCardItem> DIAOYU = register(Card.DIAOYU);
+    public static final DeferredItem<SkillCardItem> QINGLONG = register(Card.QINGLONG);
+    public static final DeferredItem<SkillCardItem> GUOZAI = register(Card.GUOZAI);
 
     private static DeferredItem<SkillCardItem> register(Card card) {
         DeferredItem<SkillCardItem> item = ITEMS.registerItem(card.id(),

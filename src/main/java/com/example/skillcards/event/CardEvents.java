@@ -3,8 +3,13 @@ package com.example.skillcards.event;
 import com.example.skillcards.CardConfig;
 import com.example.skillcards.card.ActiveStates;
 import com.example.skillcards.card.CardFx;
+import com.example.skillcards.card.impl.BenEngCard;
 import com.example.skillcards.card.impl.ChiLinCard;
 import com.example.skillcards.card.impl.DaFuNiCard;
+import com.example.skillcards.card.impl.DiaoYuCard;
+import com.example.skillcards.card.impl.GuoZaiCard;
+import com.example.skillcards.card.impl.HuskarCard;
+import com.example.skillcards.card.impl.PaoXieCard;
 import com.example.skillcards.card.impl.HaiWangCard;
 import com.example.skillcards.card.impl.QiLinCard;
 import com.example.skillcards.card.impl.YaSiTiCard;
@@ -24,6 +29,8 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -72,7 +79,7 @@ public final class CardEvents {
                     count++;
                 }
             }
-            logger.info("[SkillCards][冒烟测试] 已注册卡牌物品 {}/14", count);
+            logger.info("[SkillCards][冒烟测试] 已注册卡牌物品 {}/{}", count, ModItems.all().size());
             logger.info("[SkillCards][冒烟测试] manhunt 联动: {}，罗盘干扰钩子: {}",
                 ManhuntHook.available() ? "已加载" : "未加载",
                 ManhuntHook.compassDecoratorInstalled() ? "已安装" : "未安装");
@@ -101,6 +108,14 @@ public final class CardEvents {
         tickEndHints(now);
         tickCooldownReady(server, now);
         tickSmokeZones(server, now);
+        tickGlowSuppress(now);
+        tickRedGlow(server, now);
+        tickFrost(now);
+        tickRewind(now);
+        tickHuskar(now);
+        tickDiaoyu(now);
+        tickQinglong(now);
+        tickGuozai(now);
 
         // 麒麟：补第二道雷（跨维度解析目标）
         for (ActiveStates.PendingStrike task : ActiveStates.drainDueSecondStrikes()) {
@@ -209,7 +224,7 @@ public final class CardEvents {
         }
     }
 
-    /** 亚丝缇的赐福：内敛粒子 + 传送前一瞬炸开 + 到期传送（死亡/下线取消）。 */
+    /** 艾丝缇的赐福：内敛粒子 + 传送前一瞬炸开 + 到期传送（死亡/下线取消）。 */
     private static void tickWarpCharge(long now) {
         var iterator = ActiveStates.warpCharges().entrySet().iterator();
         while (iterator.hasNext()) {
@@ -388,10 +403,176 @@ public final class CardEvents {
         }
     }
 
+    // ==================== 盲点：发光压制 ====================
+
+    /** 逐刻压制自己身上的发光（Manhunt 每 40 刻重挂，需持续移除）；结束后由 Manhunt 刷新自然恢复。 */
+    private static void tickGlowSuppress(long now) {
+        var iterator = ActiveStates.glowSuppress().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null || now >= entry.getValue()) {
+                iterator.remove();
+                continue;
+            }
+            if (player.hasEffect(MobEffects.GLOWING)) {
+                player.removeEffect(MobEffects.GLOWING);
+            }
+        }
+    }
+
+    /** 本能模式：红色发光到期回收队伍；发光被提前移除（牛奶）时同样回收。 */
+    private static void tickRedGlow(MinecraftServer server, long now) {
+        var iterator = ActiveStates.redGlows().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            boolean expired = now >= entry.getValue();
+            boolean glowGone = player == null || !player.hasEffect(MobEffects.GLOWING);
+            if (expired || glowGone) {
+                iterator.remove();
+                BenEngCard.clearRedGlow(server, entry.getKey());
+            }
+        }
+    }
+
+    /** 霜凪：冻结血条拉满、冰晶轮廓与每秒 0.5 点冻结伤害。 */
+    private static void tickFrost(long now) {
+        var iterator = ActiveStates.frosts().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (!(findEntity(entry.getKey()) instanceof LivingEntity target) || !target.isAlive()) {
+                iterator.remove();
+                continue;
+            }
+            if (now >= entry.getValue().expiry()) {
+                iterator.remove();
+                continue;
+            }
+            if (target.level() instanceof ServerLevel level) {
+                if (now % 5 == 0) {
+                    target.setTicksFrozen(CardConfig.SHUANGNI_FROZEN_TICKS);
+                    CardFx.frostBox(level, target.getBoundingBox().inflate(0.15));
+                }
+                if (now % 20 == 0) {
+                    target.hurtServer(level, level.damageSources().freeze(),
+                        CardConfig.SHUANGNI_DAMAGE_PER_SECOND);
+                }
+            }
+        }
+    }
+
+    /** 隐秘跑鞋：8 秒后自动回溯（死亡/下线/重生的记录作废）。 */
+    private static void tickRewind(long now) {
+        var iterator = ActiveStates.rewinds().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ActiveStates.RewindMark mark = entry.getValue();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null || player.isDeadOrDying() || player.getId() != mark.entityId()) {
+                iterator.remove();
+                continue;
+            }
+            long remaining = mark.expiry() - now;
+            if (remaining == 2) {
+                CardFx.rewindSwirl(player.level(), player.getX(), player.getY() + 1.0, player.getZ());
+                continue;
+            }
+            if (remaining <= 0) {
+                iterator.remove();
+                PaoXieCard.rewind(player, mark);
+            }
+        }
+    }
+
+    /** 哈斯卡：档位增益刷新 + 火焰环绕 + 到期移除攻速。 */
+    private static void tickHuskar(long now) {
+        var iterator = ActiveStates.huskars().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null) {
+                iterator.remove();
+                continue;
+            }
+            if (now >= entry.getValue()) {
+                iterator.remove();
+                HuskarCard.expire(player);
+                continue;
+            }
+            if (now % CardConfig.HUSKAR_SWEEP_INTERVAL_TICKS == 0) {
+                HuskarCard.refreshTier(player);
+            }
+            if (now % CardConfig.ORBIT_PARTICLE_INTERVAL_TICKS == 0) {
+                CardFx.orbitStyle(player.level(), player, "huskar");
+            }
+        }
+    }
+
+    /** 钓鱼翁：环绕粒子。 */
+    private static void tickDiaoyu(long now) {
+        var iterator = ActiveStates.diaoyus().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null || now >= entry.getValue()) {
+                iterator.remove();
+                continue;
+            }
+            if (now % CardConfig.ORBIT_PARTICLE_INTERVAL_TICKS == 0) {
+                CardFx.orbitStyle(player.level(), player, "diaoyu");
+            }
+        }
+    }
+
+    /** 青龙形态：环绕粒子 + 到期回收（摔落减免随之结束）。 */
+    private static void tickQinglong(long now) {
+        var iterator = ActiveStates.qinglongs().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null || now >= entry.getValue()) {
+                iterator.remove();
+                continue;
+            }
+            if (now % CardConfig.ORBIT_PARTICLE_INTERVAL_TICKS == 0) {
+                CardFx.orbitStyle(player.level(), player, "qinglong");
+            }
+        }
+    }
+
+    /** 过载运转：蒸汽环绕 + 到期结算透支。 */
+    private static void tickGuozai(long now) {
+        var iterator = ActiveStates.guozais().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player == null) {
+                iterator.remove();
+                continue;
+            }
+            if (now >= entry.getValue()) {
+                iterator.remove();
+                GuoZaiCard.expire(player);
+                continue;
+            }
+            if (now % CardConfig.ORBIT_PARTICLE_INTERVAL_TICKS == 0) {
+                CardFx.orbitStyle(player.level(), player, "guozai");
+            }
+        }
+    }
+
     // ==================== 神罚：伤害覆写 ====================
 
     /** 有神罚标记的玩家的下一次攻击（近战/投射物）固定造成 20 点伤害，命中后标记消耗。 */
     public static void onDamagePre(LivingDamageEvent.Pre event) {
+        // 青龙形态：摔落伤害减半
+        if (event.getSource().is(DamageTypes.FALL) && event.getEntity() instanceof ServerPlayer qinglongPlayer) {
+            Long qinglongUntil = ActiveStates.qinglongs().get(qinglongPlayer.getUUID());
+            if (qinglongUntil != null && ActiveStates.now() < qinglongUntil) {
+                event.setNewDamage(event.getNewDamage() * CardConfig.QINGLONG_FALL_REDUCTION);
+            }
+        }
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) {
             return;
         }
@@ -405,6 +586,14 @@ public final class CardEvents {
 
     /** 兔子攻击命中（实际造成伤害）后分裂为两只，受同批次上限约束。 */
     public static void onDamagePost(LivingDamageEvent.Post event) {
+        // 哈斯卡之狂战：攻击命中扣血
+        if (event.getSource().getEntity() instanceof ServerPlayer huskarAttacker
+            && event.getInflictedDamage() > 0) {
+            Long huskarUntil = ActiveStates.huskars().get(huskarAttacker.getUUID());
+            if (huskarUntil != null && ActiveStates.now() < huskarUntil) {
+                HuskarCard.payCost(huskarAttacker);
+            }
+        }
         if (!(event.getSource().getDirectEntity() instanceof Rabbit rabbit)
             || !(rabbit.level() instanceof ServerLevel level)) {
             return;

@@ -1,15 +1,22 @@
 package com.example.skillcards.registry;
 
+import com.example.skillcards.card.impl.BenEngCard;
 import com.example.skillcards.card.impl.ChiLinCard;
+import com.example.skillcards.card.impl.DiaoYuCard;
 import com.example.skillcards.card.impl.DaFuNiCard;
 import com.example.skillcards.card.impl.HaiWangCard;
+import com.example.skillcards.card.impl.GuoZaiCard;
 import com.example.skillcards.card.impl.HongXingCard;
+import com.example.skillcards.card.impl.HuskarCard;
 import com.example.skillcards.card.impl.MangDianCard;
+import com.example.skillcards.card.impl.PaoXieCard;
+import com.example.skillcards.card.impl.QingLongCard;
 import com.example.skillcards.card.impl.QiLinCard;
 import com.example.skillcards.card.impl.SanShiCard;
 import com.example.skillcards.card.impl.ShaMuCard;
 import com.example.skillcards.card.impl.ShenFaCard;
 import com.example.skillcards.card.impl.ShengShuCard;
+import com.example.skillcards.card.impl.ShuangNiCard;
 import com.example.skillcards.card.impl.XiangYuCard;
 import com.example.skillcards.card.impl.YaSiTiCard;
 import com.example.skillcards.card.impl.ZhanFangCard;
@@ -27,12 +34,12 @@ public enum Card {
     XIANGYU("xiangyu", Grade.COMMON, 180, XiangYuCard::activate),
     SHAMU("shamu", Grade.COMMON, 180, ShaMuCard::activate),
     ZHANFANG("zhanfang", Grade.COMMON, 180, ZhanFangCard::activate),
-    SHENFA("shenfa", Grade.COMMON, 180, ShenFaCard::activate),
+    SHENFA("shenfa", Grade.COMMON, 120, ShenFaCard::activate),
     HONGXING("hongxing", Grade.COMMON, 120, HongXingCard::activate),
 
-    DAFUNI("dafuni", Grade.RARE, 480, DaFuNiCard::activate),
+    DAFUNI("dafuni", Grade.RARE, 360, DaFuNiCard::activate),
     QILIN("qilin", Grade.RARE, 180, QiLinCard::activate),
-    SANSHI("sanshi", Grade.RARE, 300, SanShiCard::activate),
+    SANSHI("sanshi", Grade.RARE, 240, SanShiCard::activate),
     MANGDIAN("mangdian", Grade.RARE, 300, MangDianCard::activate),
 
     HAIWANG("haiwang", Grade.RAINBOW, 120, HaiWangCard::activate),
@@ -40,7 +47,15 @@ public enum Card {
 
     ZUZHOU("zuzhou", Grade.BLACK, 300, ZuZhouCard::activate),
     SHENGSHU("shengshu", Grade.BLACK, 300, ShengShuCard::activate),
-    CHILIN("chilin", Grade.BLACK, 300, ChiLinCard::activate);
+    CHILIN("chilin", Grade.BLACK, 300, ChiLinCard::activate),
+
+    BENENG("beneng", Grade.RARE, 120, BenEngCard::activate),
+    SHUANGNI("shuangni", Grade.COMMON, 180, ShuangNiCard::activate),
+    PAOXIE("paoxie", Grade.RARE, 180, PaoXieCard::activate),
+    HUSKAR("huskar", Grade.BLACK, 240, HuskarCard::activate),
+    DIAOYU("diaoyu", Grade.BLACK, 180, DiaoYuCard::activate),
+    QINGLONG("qinglong", Grade.RAINBOW, 120, QingLongCard::activate),
+    GUOZAI("guozai", Grade.BLACK, 180, GuoZaiCard::activate);
 
     private final String id;
     private final Grade grade;

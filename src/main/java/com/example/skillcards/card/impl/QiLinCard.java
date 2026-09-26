@@ -29,8 +29,10 @@ public final class QiLinCard {
         }
         for (LivingEntity target : targets) {
             strike(target);
-            ActiveStates.scheduleSecondStrike(target.getUUID(),
-                ActiveStates.now() + CardConfig.QILIN_SECOND_STRIKE_DELAY_TICKS);
+            for (int i = 1; i < CardConfig.QILIN_STRIKE_COUNT; i++) {
+                ActiveStates.scheduleSecondStrike(target.getUUID(),
+                    ActiveStates.now() + (long) CardConfig.QILIN_STRIKE_INTERVAL_TICKS * i);
+            }
         }
         ServerLevel level = player.level();
         Vec3 front = CardFx.frontPos(player);

@@ -28,8 +28,6 @@ public final class ZhanFangCard {
             target.push(away.x * scale, CardConfig.ZHANFANG_KNOCKBACK_VERTICAL, away.z * scale);
             target.hurtMarked = true; // 立即同步速度到客户端
         }
-        player.addEffect(new MobEffectInstance(MobEffects.HEALTH_BOOST,
-            CardConfig.ZHANFANG_HEALTH_BOOST_DURATION_TICKS, CardConfig.ZHANFANG_HEALTH_BOOST_AMPLIFIER));
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION,
             CardConfig.ZHANFANG_ABSORPTION_DURATION_TICKS, CardConfig.ZHANFANG_ABSORPTION_AMPLIFIER));
 

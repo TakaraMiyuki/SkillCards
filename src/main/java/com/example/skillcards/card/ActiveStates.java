@@ -4,6 +4,7 @@ import com.example.skillcards.registry.Card;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -27,11 +28,26 @@ public final class ActiveStates {
     private static final Map<UUID, Long> CURSE = new HashMap<>();       // 诅咒化身：最大生命减半到期
     private static final Map<UUID, Long> SACRED = new HashMap<>();      // 圣树化身：环绕粒子时长
     private static final Map<UUID, Long> JAM = new HashMap<>();         // 盲点：猎人罗盘乱指到期
-    private static final Map<UUID, Long> WARP_CHARGE = new HashMap<>(); // 亚丝缇：蓄力完成时刻
+    private static final Map<UUID, Long> WARP_CHARGE = new HashMap<>(); // 艾丝缇：蓄力完成时刻
     private static final List<PendingStrike> SECOND_STRIKES = new ArrayList<>(); // 麒麟：待补的第二道雷
     private static final Map<UUID, Map<Card, Long>> END_HINTS = new HashMap<>(); // 到期时提示"效果结束"
     private static final Map<UUID, Set<Card>> COOLING = new HashMap<>(); // 冷却完毕提醒的记忆集
     private static final Map<UUID, SmokeZone> SMOKE_ZONES = new HashMap<>(); // 纱幕：原地黑灰烟雾团
+    private static final Map<UUID, Long> GLOW_SUPPRESS = new HashMap<>();   // 盲点：发光压制到期
+    private static final Map<UUID, Long> RED_GLOW = new HashMap<>();        // 本能模式：红色发光到期（队伍回收）
+    private static final Map<UUID, FrostMark> FROST = new HashMap<>();      // 霜凪：冰封中的目标
+    private static final Map<UUID, RewindMark> REWIND = new HashMap<>();    // 隐秘跑鞋：回溯记录
+    private static final Map<UUID, Long> HUSKAR = new HashMap<>();          // 哈斯卡：强化到期
+    private static final Map<UUID, Long> DIAOYU = new HashMap<>();          // 钓鱼翁：环绕粒子到期
+    private static final Map<UUID, Long> QINGLONG = new HashMap<>();        // 青龙形态：形态到期（摔落减免）
+    private static final Map<UUID, Long> GUOZAI = new HashMap<>();          // 过载运转：强化到期（结算透支）
+
+    /** 霜凪：冰封目标标记（跨维度按 UUID 解析实体）。 */
+    public record FrostMark(long expiry) {}
+
+    /** 隐秘跑鞋：发动时的行踪快照（8 秒后回溯）。 */
+    public record RewindMark(ResourceKey<Level> dimension, Vec3 pos, float yRot, float xRot,
+                             float health, int entityId, long expiry) {}
     private static final Map<UUID, CrimsonDrain> CRIMSON_DRAINS = new HashMap<>(); // 赤鳞：进行中的分段扣血
     private static final Map<UUID, Long> CRIMSON_AURA = new HashMap<>(); // 赤鳞：红色光环到期
 
@@ -60,6 +76,14 @@ public final class ActiveStates {
         END_HINTS.clear();
         COOLING.clear();
         SMOKE_ZONES.clear();
+        GLOW_SUPPRESS.clear();
+        RED_GLOW.clear();
+        FROST.clear();
+        REWIND.clear();
+        HUSKAR.clear();
+        DIAOYU.clear();
+        QINGLONG.clear();
+        GUOZAI.clear();
     }
 
     /** 清除全部烟雾团（管理员指令用），返回清除数量。 */
@@ -81,6 +105,14 @@ public final class ActiveStates {
         COOLING.remove(id);
         CRIMSON_DRAINS.remove(id);
         CRIMSON_AURA.remove(id);
+        GLOW_SUPPRESS.remove(id);
+        RED_GLOW.remove(id);
+        FROST.remove(id);
+        REWIND.remove(id);
+        HUSKAR.remove(id);
+        DIAOYU.remove(id);
+        QINGLONG.remove(id);
+        GUOZAI.remove(id);
     }
 
     public static MinecraftServer server() {
@@ -197,7 +229,7 @@ public final class ActiveStates {
         return get(JAM, hunter) != null;
     }
 
-    // ==================== 亚丝缇（蓄力） ====================
+    // ==================== 艾丝缇（蓄力） ====================
 
     public static void setWarpCharge(UUID user, long until) {
         set(WARP_CHARGE, user, until);
@@ -269,6 +301,80 @@ public final class ActiveStates {
     public static void clearCrimson(UUID id) {
         CRIMSON_DRAINS.remove(id);
         CRIMSON_AURA.remove(id);
+    }
+
+    // ==================== 盲点：发光压制 ====================
+
+    public static void setGlowSuppress(UUID id, long until) {
+        GLOW_SUPPRESS.put(id, until);
+    }
+
+    public static Map<UUID, Long> glowSuppress() {
+        return GLOW_SUPPRESS;
+    }
+
+    // ==================== 本能模式：红色发光 ====================
+
+    public static void setRedGlow(UUID id, long until) {
+        RED_GLOW.put(id, until);
+    }
+
+    public static Map<UUID, Long> redGlows() {
+        return RED_GLOW;
+    }
+
+    // ==================== 霜凪：冰封 ====================
+
+    public static void setFrost(UUID id, FrostMark mark) {
+        FROST.put(id, mark);
+    }
+
+    public static Map<UUID, FrostMark> frosts() {
+        return FROST;
+    }
+
+    // ==================== 隐秘跑鞋：回溯 ====================
+
+    public static void setRewind(UUID id, RewindMark mark) {
+        REWIND.put(id, mark);
+    }
+
+    public static Map<UUID, RewindMark> rewinds() {
+        return REWIND;
+    }
+
+    // ==================== 哈斯卡 / 钓鱼翁 / 青龙 / 过载 ====================
+
+    public static void setHuskar(UUID id, long until) {
+        HUSKAR.put(id, until);
+    }
+
+    public static Map<UUID, Long> huskars() {
+        return HUSKAR;
+    }
+
+    public static void setDiaoyu(UUID id, long until) {
+        DIAOYU.put(id, until);
+    }
+
+    public static Map<UUID, Long> diaoyus() {
+        return DIAOYU;
+    }
+
+    public static void setQinglong(UUID id, long until) {
+        QINGLONG.put(id, until);
+    }
+
+    public static Map<UUID, Long> qinglongs() {
+        return QINGLONG;
+    }
+
+    public static void setGuozai(UUID id, long until) {
+        GUOZAI.put(id, until);
+    }
+
+    public static Map<UUID, Long> guozais() {
+        return GUOZAI;
     }
 
     // ==================== 结束提示（有持续时间的卡） ====================
