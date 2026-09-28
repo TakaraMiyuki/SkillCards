@@ -30,6 +30,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.world.item.ItemStack;
@@ -600,6 +601,11 @@ public final class CardEvents {
         }
         if (event.getInflictedDamage() <= 0) {
             return;
+        }
+        // 魔兔命中附加 3 秒饥饿
+        if (rabbit.getData(CardState.BUNNY_MARK) != null && event.getEntity().isAlive()) {
+            event.getEntity().addEffect(new MobEffectInstance(
+                MobEffects.HUNGER, CardConfig.DAFUNI_HUNGER_TICKS, 0), rabbit);
         }
         DaFuNiCard.trySplit(level, rabbit);
     }

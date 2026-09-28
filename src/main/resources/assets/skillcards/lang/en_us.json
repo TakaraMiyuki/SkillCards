@@ -1,13 +1,11 @@
 {
   "itemGroup.skillcards": "Skill Cards",
-
   "card.skillcards.grade.common": "Common Card",
   "card.skillcards.grade.rare": "Rare Card",
   "card.skillcards.grade.rainbow": "Rainbow Card",
   "card.skillcards.grade.black": "Black Card",
   "item.skillcards.cooldown": "Cooldown: %s",
   "item.skillcards.shift_hint": "Hold Shift for details",
-
   "item.skillcards.xiangyu": "Xiangyu (Resonant Jade)",
   "item.skillcards.xiangyu.brief": "Restore a small amount of health",
   "item.skillcards.xiangyu.desc": "Grants Regeneration IV for 8 seconds",
@@ -23,10 +21,9 @@
   "item.skillcards.hongxing": "Hongxing (Rainbow Star)",
   "item.skillcards.hongxing.brief": "Dash forward and gain slight speed",
   "item.skillcards.hongxing.desc": "Dashes ~12 blocks toward your view direction; grants Speed IV for 5 seconds",
-
   "item.skillcards.dafuni": "Dafuni zhi Zaie (Daphne's Calamity)",
   "item.skillcards.dafuni.brief": "Summon a horde of demon bunnies",
-  "item.skillcards.dafuni.desc": "Summons 20 white demon bunnies that attack hunters; each bunny splits in two after landing an attack; all vanish after 120 seconds",
+  "item.skillcards.dafuni.desc": "Summons 20 white bunnies that hunt hunters; each bunny splits into two after landing a hit, and hits inflict 3s of Hunger; all bunnies vanish after 120s",
   "item.skillcards.qilin": "Qilin",
   "item.skillcards.qilin.brief": "Call down precise lightning strikes",
   "item.skillcards.qilin.desc": "Precisely strikes hunters within 10 blocks with lightning, three times each (0.5s apart)",
@@ -36,14 +33,12 @@
   "item.skillcards.mangdian": "Mangdian (Blind Spot)",
   "item.skillcards.mangdian.brief": "Jam trackers and conceal yourself",
   "item.skillcards.mangdian.desc": "Jams the hunters' tracking compass for 60 seconds; removes your own glowing (restored after); grants self Invisibility (30s)",
-
   "item.skillcards.haiwang": "Haiwang zhi Yi (Wings of Poseidon)",
   "item.skillcards.haiwang.brief": "Fly like the sea god",
   "item.skillcards.haiwang.desc": "Grants self flight for 20 seconds",
   "item.skillcards.yasiti": "Yasidi de Cifu (Aster's Blessing)",
   "item.skillcards.yasiti.brief": "Warp to a random location",
   "item.skillcards.yasiti.desc": "Randomly teleports self to a location more than 200 and less than 300 blocks away",
-
   "item.skillcards.zuzhou": "Zuzhou Huashen (Avatar of Curse)",
   "item.skillcards.zuzhou.brief": "Greatly boost attack, at the cost of max health",
   "item.skillcards.zuzhou.desc": "Grants Strength IV for 60 seconds; max health is halved during the effect",
@@ -53,7 +48,6 @@
   "item.skillcards.chilin": "Chilin zhi Yuedong (Crimson Scale's Leap)",
   "item.skillcards.chilin.brief": "Lose health, empower your body",
   "item.skillcards.chilin.desc": "Rapidly drains 20 health in chunks (never lethal), granting Speed II, Strength II, Night Vision, Haste III and Jump Boost I for 30 seconds",
-
   "item.skillcards.beneng": "Beneng (Instinct Mode)",
   "item.skillcards.beneng.brief": "Sense the movements of hunters in range",
   "item.skillcards.beneng.desc": "Gives hunters within 200 blocks a red-outlined Glowing effect (60s); grants self Speed I (10s)",

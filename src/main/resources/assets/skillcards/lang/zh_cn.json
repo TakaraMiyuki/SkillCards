@@ -1,13 +1,11 @@
 {
   "itemGroup.skillcards": "技能卡",
-
   "card.skillcards.grade.common": "普通卡",
   "card.skillcards.grade.rare": "稀有卡",
   "card.skillcards.grade.rainbow": "彩卡",
   "card.skillcards.grade.black": "黑卡",
   "item.skillcards.cooldown": "冷却：%s",
   "item.skillcards.shift_hint": "按住 Shift 查看详情",
-
   "item.skillcards.xiangyu": "响玉",
   "item.skillcards.xiangyu.brief": "恢复少量生命值",
   "item.skillcards.xiangyu.desc": "使用后自己获得生命恢复4，持续8秒",
@@ -23,10 +21,9 @@
   "item.skillcards.hongxing": "虹星",
   "item.skillcards.hongxing.brief": "向前快速突进并略微加速",
   "item.skillcards.hongxing.desc": "使用后向目视方向发动一次冲刺（约12格），自己获得速度4（持续5秒）",
-
   "item.skillcards.dafuni": "达芙妮之灾厄",
   "item.skillcards.dafuni.brief": "召唤大量攻击敌人的魔兔",
-  "item.skillcards.dafuni.desc": "使用后召唤20只攻击猎人的白色魔兔；每只兔子发动一次攻击会分裂为两只；所有兔子持续120秒后消失",
+  "item.skillcards.dafuni.desc": "使用后召唤20只攻击猎人的白色魔兔；每只兔子发动一次攻击会分裂为两只，命中附加3秒饥饿；所有兔子持续120秒后消失",
   "item.skillcards.qilin": "麒麟",
   "item.skillcards.qilin.brief": "召唤落雷攻击",
   "item.skillcards.qilin.desc": "使用后精准雷击三次周围10格的猎人（每道间隔0.5秒）",
@@ -36,14 +33,12 @@
   "item.skillcards.mangdian": "盲点",
   "item.skillcards.mangdian.brief": "干扰敌人的追踪指南，并隐秘行踪",
   "item.skillcards.mangdian.desc": "使用后干扰猎人的追踪指南（持续乱指），持续60秒；消除自己身上的发光并在效果结束后恢复；自己获得隐身（持续30秒）",
-
   "item.skillcards.haiwang": "海王之翼",
   "item.skillcards.haiwang.brief": "能够像海王一样飞翔",
   "item.skillcards.haiwang.desc": "使用后自己获得飞翔，持续20秒",
   "item.skillcards.yasiti": "艾丝缇的赐福",
   "item.skillcards.yasiti.brief": "进行随机的空间穿梭",
   "item.skillcards.yasiti.desc": "使用后自己随机在大于200格、小于300格的范围内随机传送",
-
   "item.skillcards.zuzhou": "诅咒化身",
   "item.skillcards.zuzhou.brief": "大幅强化攻击力，但减少最大生命值",
   "item.skillcards.zuzhou.desc": "使用后自己获得力量4，持续60秒；期间内最大生命值减少50%",
@@ -53,7 +48,6 @@
   "item.skillcards.chilin": "赤鳞之跃动",
   "item.skillcards.chilin.brief": "损失生命值，强化身体机能",
   "item.skillcards.chilin.desc": "使用后分段快速损失20点生命值（保留最后2点，不会致死），获得速度2、力量2、夜视、急迫3、跳跃提升1，持续30秒",
-
   "item.skillcards.beneng": "本能模式",
   "item.skillcards.beneng.brief": "洞察范围内猎人的动向",
   "item.skillcards.beneng.desc": "使用后给予范围内200格的猎人发光（红色轮廓），持续60秒；给予自己速度1，持续10秒",

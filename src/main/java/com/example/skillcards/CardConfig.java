@@ -97,8 +97,16 @@ public final class CardConfig {
     public static final int SHAMU_SMOKE_DURATION_TICKS = 30 * 20;
     public static final int SHAMU_SMOKE_WAVE_INTERVAL_TICKS = 3; // 粒子生成波次间隔
 
-    // ==================== 达芙妮：魔兔移速 ====================
-    public static final double DAFUNI_BUNNY_MOVEMENT_SPEED = 0.35; // 接近玩家疾跑速度
+    // ==================== 达芙妮：魔兔移速与攻击 ====================
+    public static final double DAFUNI_BUNNY_MOVEMENT_SPEED = 0.45; // 滞空跳跃移速（配合牵引逼近疾跑）
+    /** 魔兔每刻向目标施加的牵引加速度（水平；地面摩擦下稳定在 DAFUNI_MAX_SPEED 附近）。 */
+    public static final double DAFUNI_PULL_ACCEL = 0.06;
+    /** 魔兔牵引后的水平速度上限（格/刻，约 6 m/s > 玩家疾跑 5.6 m/s）。 */
+    public static final double DAFUNI_MAX_SPEED = 0.30;
+    /** 魔兔牵引的贴身停止半径（格，贴脸后不再加速）。 */
+    public static final double DAFUNI_PULL_STOP_DIST = 2.0;
+    /** 魔兔攻击命中附加的饥饿时长（刻，3 秒）。 */
+    public static final int DAFUNI_HUNGER_TICKS = 60;
 
     // ==================== 本能模式：红色发光洞察 ====================
     public static final double BENENG_RADIUS = 200.0;

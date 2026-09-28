@@ -120,7 +120,11 @@ public final class DaFuNiCard {
         return count;
     }
 
-    /** 兔子周期逻辑（由 EntityTickEvent.Post 调用）：到期清除 + 只锁定合法目标（猎人/敌对生物）。 */
+    /**
+     * 兔子每刻逻辑（由 EntityTickEvent.Post 调用）：
+     * 到期清除 + 向目标牵引（兔子跳跃式移动对移速增益不敏感，用牵引保证追上疾跑）
+     * + 每秒重新索敌（只锁定合法目标：猎人/敌对生物）。
+     */
     public static void tick(ServerLevel level, Rabbit rabbit) {
         CardState.BunnyMark mark = rabbit.getData(CardState.BUNNY_MARK);
         if (mark == null) {
@@ -132,6 +136,7 @@ public final class DaFuNiCard {
             rabbit.discard();
             return;
         }
+        pullTowardTarget(rabbit);
         if (rabbit.tickCount % 20 != 0) {
             return;
         }
@@ -155,6 +160,36 @@ public final class DaFuNiCard {
         if (nearest != null) {
             rabbit.setTarget(nearest);
         }
+    }
+
+    /**
+     * 牵引：兔子落地后有 10 刻硬直且速度归零（{@code setLandingDelay}），常规移速增益在
+     * 跳跃式移动下收效甚微——改为每刻直接向目标方向补充水平速度（仅地面、贴身后停止），
+     * 摩擦下稳定在 {@link CardConfig#DAFUNI_MAX_SPEED}（约 6 m/s），足以追上疾跑玩家。
+     */
+    private static void pullTowardTarget(Rabbit rabbit) {
+        LivingEntity target = rabbit.getTarget();
+        if (target == null || !target.isAlive() || !rabbit.onGround()) {
+            return;
+        }
+        double dx = target.getX() - rabbit.getX();
+        double dz = target.getZ() - rabbit.getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+        if (horiz <= CardConfig.DAFUNI_PULL_STOP_DIST) {
+            return; // 已贴身
+        }
+        Vec3 cur = rabbit.getDeltaMovement();
+        double curH = Math.sqrt(cur.x * cur.x + cur.z * cur.z);
+        if (curH >= CardConfig.DAFUNI_MAX_SPEED) {
+            return;
+        }
+        Vec3 next = cur.add(dx / horiz * CardConfig.DAFUNI_PULL_ACCEL, 0,
+            dz / horiz * CardConfig.DAFUNI_PULL_ACCEL);
+        double nextH = Math.sqrt(next.x * next.x + next.z * next.z);
+        if (nextH > CardConfig.DAFUNI_MAX_SPEED) {
+            next = next.scale(CardConfig.DAFUNI_MAX_SPEED / nextH);
+        }
+        rabbit.setDeltaMovement(next.x, cur.y, next.z);
     }
 
     /** 攻击命中后分裂为两只（原体保留 + 新增一只），受同批次上限约束。 */
