@@ -1,6 +1,9 @@
 package com.example.skillcards.card;
 
 import com.example.skillcards.registry.Card;
+import com.example.skillcards.systems.GlobalEffects;
+import net.minecraft.core.Holder;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
@@ -41,6 +44,28 @@ public final class ActiveStates {
     private static final Map<UUID, Long> DIAOYU = new HashMap<>();          // 钓鱼翁：环绕粒子到期
     private static final Map<UUID, Long> QINGLONG = new HashMap<>();        // 青龙形态：形态到期（摔落减免）
     private static final Map<UUID, Long> GUOZAI = new HashMap<>();          // 过载运转：强化到期（结算透支）
+    private static final Map<UUID, GlobalEffects.Scorch> SCORCH = new HashMap<>();          // 全局：灼烧
+    private static final Map<UUID, GlobalEffects.Dance> SWORD_DANCE = new HashMap<>();      // 全局：剑舞
+    private static final Map<UUID, GlobalEffects.Kuangwu> KUANGWU = new HashMap<>();        // 狂舞：狂剑层数
+    private static final Map<UUID, Set<Card>> PASSIVES = new HashMap<>();   // 玩家当前持有的被动卡
+    private static final Map<UUID, Long> GUIREN = new HashMap<>();          // 鬼人：攻速叠层窗口
+    private static final Map<UUID, Bracer> BIZHANG = new HashMap<>();       // 臂章：扣除的生命与到期
+    private static final Map<UUID, Long> DIAOSHE_WINDOW = new HashMap<>();  // 吊射：30秒发动窗口
+    private static final Map<UUID, RainZone> RAIN_ZONES = new HashMap<>();  // 吊射：箭雨区
+    private static final Map<UUID, Map<Holder<MobEffect>, Long>> FALUN_FIRST = new HashMap<>(); // 法轮：负面效果首见
+    private static final Map<UUID, Set<Holder<MobEffect>>> FALUN_ADAPTED = new HashMap<>();     // 法轮：已适应
+    private static final Map<UUID, Long> FALUN_FX = new HashMap<>();        // 法轮：适应音效粒子窗口
+    private static final Map<UUID, Long> LAST_MELEE = new HashMap<>();      // 蓄势：上次近战命中时刻
+    private static final Map<UUID, XushiBeat> XUSHI_SOUND = new HashMap<>(); // 蓄势：心跳音效调度
+
+    /** 蓄势心跳调度状态（until / 交替标记）。 */
+    public record XushiBeat(long until, boolean alternate) {}
+
+    /** 臂章：临时扣除的生命值与到期时刻。 */
+    public record Bracer(float deducted, long until) {}
+
+    /** 吊射：一个箭雨区（中心 + 维持到何时 + 归属者）。 */
+    public record RainZone(ResourceKey<Level> dimension, double x, double y, double z, long until, UUID owner) {}
 
     /** 霜凪：冰封目标标记（跨维度按 UUID 解析实体）。 */
     public record FrostMark(long expiry) {}
@@ -84,6 +109,19 @@ public final class ActiveStates {
         DIAOYU.clear();
         QINGLONG.clear();
         GUOZAI.clear();
+        SCORCH.clear();
+        SWORD_DANCE.clear();
+        KUANGWU.clear();
+        PASSIVES.clear();
+        GUIREN.clear();
+        BIZHANG.clear();
+        DIAOSHE_WINDOW.clear();
+        RAIN_ZONES.clear();
+        FALUN_FIRST.clear();
+        FALUN_ADAPTED.clear();
+        FALUN_FX.clear();
+        LAST_MELEE.clear();
+        XUSHI_SOUND.clear();
     }
 
     /** 清除全部烟雾团（管理员指令用），返回清除数量。 */
@@ -113,6 +151,18 @@ public final class ActiveStates {
         DIAOYU.remove(id);
         QINGLONG.remove(id);
         GUOZAI.remove(id);
+        SCORCH.remove(id);
+        SWORD_DANCE.remove(id);
+        KUANGWU.remove(id);
+        PASSIVES.remove(id);
+        GUIREN.remove(id);
+        BIZHANG.remove(id);
+        DIAOSHE_WINDOW.remove(id);
+        FALUN_FIRST.remove(id);
+        FALUN_ADAPTED.remove(id);
+        FALUN_FX.remove(id);
+        LAST_MELEE.remove(id);
+        XUSHI_SOUND.remove(id);
     }
 
     public static MinecraftServer server() {
@@ -375,6 +425,105 @@ public final class ActiveStates {
 
     public static Map<UUID, Long> guozais() {
         return GUOZAI;
+    }
+
+    // ==================== 全局效果 / 被动卡 ====================
+
+    public static Map<UUID, GlobalEffects.Scorch> scorch() {
+        return SCORCH;
+    }
+
+    public static Map<UUID, GlobalEffects.Dance> swordDance() {
+        return SWORD_DANCE;
+    }
+
+    public static Map<UUID, GlobalEffects.Kuangwu> kuangwuState() {
+        return KUANGWU;
+    }
+
+    public static Set<Card> passives(UUID id) {
+        return PASSIVES.getOrDefault(id, Set.of());
+    }
+
+    public static void setPassives(UUID id, Set<Card> cards) {
+        PASSIVES.put(id, Set.copyOf(cards));
+    }
+
+    public static boolean hasPassive(UUID id, Card card) {
+        return PASSIVES.getOrDefault(id, Set.of()).contains(card);
+    }
+
+    public static void setGuiren(UUID id, long until) {
+        GUIREN.put(id, until);
+    }
+
+    public static Long guiren(UUID id) {
+        Long until = GUIREN.get(id);
+        return until != null && now() < until ? until : null;
+    }
+
+    public static void setBizhang(UUID id, Bracer bracer) {
+        BIZHANG.put(id, bracer);
+    }
+
+    public static Bracer removeBizhang(UUID id) {
+        return BIZHANG.remove(id);
+    }
+
+    public static Map<UUID, Bracer> bizhangs() {
+        return BIZHANG;
+    }
+
+    public static void setDiaosheWindow(UUID id, long until) {
+        DIAOSHE_WINDOW.put(id, until);
+    }
+
+    public static boolean diaosheActive(UUID id, long now) {
+        Long until = DIAOSHE_WINDOW.get(id);
+        return until != null && now < until;
+    }
+
+    public static Map<UUID, Long> diaosheWindows() {
+        return DIAOSHE_WINDOW;
+    }
+
+    public static Map<UUID, RainZone> rainZones() {
+        return RAIN_ZONES;
+    }
+
+    public static void addRainZone(RainZone zone) {
+        if (RAIN_ZONES.size() >= 12) {
+            RAIN_ZONES.clear();
+        }
+        RAIN_ZONES.put(UUID.randomUUID(), zone);
+    }
+
+    public static Map<UUID, Map<Holder<MobEffect>, Long>> falunFirst() {
+        return FALUN_FIRST;
+    }
+
+    public static Set<Holder<MobEffect>> falunAdapted(UUID id) {
+        return FALUN_ADAPTED.computeIfAbsent(id, k -> new java.util.HashSet<>());
+    }
+
+    public static Map<UUID, Set<Holder<MobEffect>>> falunAdapted() {
+        return FALUN_ADAPTED;
+    }
+
+    public static Map<UUID, Long> falunFx() {
+        return FALUN_FX;
+    }
+
+    public static Long lastMelee(UUID id) {
+        return LAST_MELEE.get(id);
+    }
+
+    public static void setLastMelee(UUID id, long time) {
+        LAST_MELEE.put(id, time);
+    }
+
+    public static Map<UUID, XushiBeat> xushiSound() {
+        return XUSHI_SOUND;
     }
 
     // ==================== 结束提示（有持续时间的卡） ====================

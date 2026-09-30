@@ -182,6 +182,11 @@ public final class CardFx {
         player.sendSystemMessage(Component.literal("§7[技能卡] §f" + message), true);
     }
 
+    /** 被动卡右键提示。 */
+    public static void passiveHint(ServerPlayer player) {
+        player.sendSystemMessage(Component.literal("§7[技能卡] §f被动卡：放入背包即可自动生效"), true);
+    }
+
     /** 标准提示："发动 / 效果结束 / 冷却完毕 + 品级色卡名"。 */
     public static void announce(ServerPlayer player, String action, Card card) {
         MutableComponent name = Component.translatable(ModItems.itemOf(card).getDescriptionId())

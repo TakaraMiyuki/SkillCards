@@ -42,6 +42,23 @@ public final class ModItems {
     public static final DeferredItem<SkillCardItem> DIAOYU = register(Card.DIAOYU);
     public static final DeferredItem<SkillCardItem> QINGLONG = register(Card.QINGLONG);
     public static final DeferredItem<SkillCardItem> GUOZAI = register(Card.GUOZAI);
+    public static final DeferredItem<SkillCardItem> GONGSHI = register(Card.GONGSHI);
+    public static final DeferredItem<SkillCardItem> ZHENJI = register(Card.ZHENJI);
+    public static final DeferredItem<SkillCardItem> ZHONGYA = register(Card.ZHONGYA);
+    public static final DeferredItem<SkillCardItem> XUSHI = register(Card.XUSHI);
+    public static final DeferredItem<SkillCardItem> YUANMAN = register(Card.YUANMAN);
+    public static final DeferredItem<SkillCardItem> SHAOBING = register(Card.SHAOBING);
+    public static final DeferredItem<SkillCardItem> ESHA = register(Card.ESHA);
+    public static final DeferredItem<SkillCardItem> BEISHI = register(Card.BEISHI);
+    public static final DeferredItem<SkillCardItem> DUOCHONG = register(Card.DUOCHONG);
+    public static final DeferredItem<SkillCardItem> FALUN = register(Card.FALUN);
+    public static final DeferredItem<SkillCardItem> DUNZOU = register(Card.DUNZOU);
+    public static final DeferredItem<SkillCardItem> KUANGWU = register(Card.KUANGWU);
+    public static final DeferredItem<SkillCardItem> FEIXUE = register(Card.FEIXUE);
+    public static final DeferredItem<SkillCardItem> RANHUO = register(Card.RANHUO);
+    public static final DeferredItem<SkillCardItem> GUIREN = register(Card.GUIREN);
+    public static final DeferredItem<SkillCardItem> BIZHANG = register(Card.BIZHANG);
+    public static final DeferredItem<SkillCardItem> DIAOSHE = register(Card.DIAOSHE);
 
     private static DeferredItem<SkillCardItem> register(Card card) {
         DeferredItem<SkillCardItem> item = ITEMS.registerItem(card.id(),

@@ -1,5 +1,6 @@
 package com.example.skillcards.item;
 
+import com.example.skillcards.card.CardFx;
 import com.example.skillcards.registry.Card;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
@@ -53,6 +54,10 @@ public class SkillCardItem extends Item {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
+        if (card().isPassive()) {
+            CardFx.passiveHint(serverPlayer);
+            return InteractionResult.FAIL;
+        }
         boolean used = card().activate(serverPlayer);
         if (used) {
             serverPlayer.getCooldowns().addCooldown(stack, card().cooldownTicks());
@@ -71,7 +76,11 @@ public class SkillCardItem extends Item {
         String base = stack.getItem().getDescriptionId();
         tooltip.accept(colored(Component.translatable(card.grade().translationKey()), card.grade().color()));
         tooltip.accept(colored(Component.translatable(base + ".brief"), 0xFFFFFF));
-        tooltip.accept(colored(Component.translatable("item.skillcards.cooldown", cooldownText()), 0x777777));
+        if (card().isPassive()) {
+            tooltip.accept(colored(Component.translatable("item.skillcards.passive_hint"), 0x77DD77));
+        } else {
+            tooltip.accept(colored(Component.translatable("item.skillcards.cooldown", cooldownText()), 0x777777));
+        }
         if (shiftDown()) {
             tooltip.accept(Component.empty());
             tooltip.accept(colored(Component.translatable(base + ".desc"), 0xAAAAAA));

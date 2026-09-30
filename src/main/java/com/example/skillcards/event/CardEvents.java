@@ -4,12 +4,19 @@ import com.example.skillcards.CardConfig;
 import com.example.skillcards.card.ActiveStates;
 import com.example.skillcards.card.CardFx;
 import com.example.skillcards.card.impl.BenEngCard;
+import com.example.skillcards.card.impl.BizhangCard;
+import com.example.skillcards.card.impl.DiaoSheCard;
+import com.example.skillcards.card.impl.DuochongCard;
+import com.example.skillcards.card.impl.FaLunCard;
+import com.example.skillcards.systems.GlobalEffects;
 import com.example.skillcards.card.impl.ChiLinCard;
 import com.example.skillcards.card.impl.DaFuNiCard;
 import com.example.skillcards.card.impl.DiaoYuCard;
 import com.example.skillcards.card.impl.GuoZaiCard;
 import com.example.skillcards.card.impl.HuskarCard;
 import com.example.skillcards.card.impl.PaoXieCard;
+import com.example.skillcards.card.impl.KuangwuCard;
+import com.example.skillcards.card.impl.FeiXueCard;
 import com.example.skillcards.card.impl.HaiWangCard;
 import com.example.skillcards.card.impl.QiLinCard;
 import com.example.skillcards.card.impl.YaSiTiCard;
@@ -30,6 +37,23 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.arrow.Arrow;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
+import net.neoforged.neoforge.event.entity.player.ArrowLooseEvent;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.core.particles.ParticleOptions;
@@ -50,6 +74,8 @@ import java.util.UUID;
 /** 全部事件监听与每刻扫描（到期处理 / 环绕粒子 / 兔子 AI / 冷却提醒 / 永久属性重挂）。 */
 public final class CardEvents {
     private CardEvents() {}
+
+    private static final Map<UUID, Long> FULL_BOW_SHOTS = new java.util.HashMap<>(); // 吊射：满蓄力弓射击标记
 
     // ==================== 生命周期 ====================
 
@@ -117,6 +143,15 @@ public final class CardEvents {
         tickDiaoyu(now);
         tickQinglong(now);
         tickGuozai(now);
+        tickPassives(server, now);
+        GlobalEffects.tickScorch(now);
+        GlobalEffects.tickDance(now);
+        tickBizhang(now);
+        tickFalun(server, now);
+        tickXushiHeartbeat(server, now);
+        tickGongshiFx(server, now);
+        tickRainZones(server, now);
+        tickFalunFx(now);
 
         // 麒麟：补第二道雷（跨维度解析目标）
         for (ActiveStates.PendingStrike task : ActiveStates.drainDueSecondStrikes()) {
@@ -404,6 +439,266 @@ public final class CardEvents {
         }
     }
 
+    // ==================== 被动卡 / 全局系统 ====================
+
+    /** 每 0.5 秒重算玩家背包中的被动卡集合（含副手）。 */
+    private static void tickPassives(MinecraftServer server, long now) {
+        if (now % 10 != 0) {
+            return;
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            java.util.Set<Card> found = new HashSet<>();
+            for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
+                if (stack.getItem() instanceof SkillCardItem cardItem && cardItem.card().isPassive()) {
+                    found.add(cardItem.card());
+                }
+            }
+            ItemStack offhandStack = player.getItemInHand(InteractionHand.OFF_HAND);
+            if (offhandStack.getItem() instanceof SkillCardItem offhandCard && offhandCard.card().isPassive()) {
+                found.add(offhandCard.card());
+            }
+            // 饰品栏（Curios）中的被动卡同样生效
+            com.example.skillcards.compat.CuriosBridge.collectPassives(player, found);
+            ActiveStates.setPassives(player.getUUID(), found);
+        }
+    }
+
+    /** 攻势：正在移动且拥有迅捷时，脚下零散白色粒子。 */
+    private static void tickGongshiFx(MinecraftServer server, long now) {
+        if (now % 8 != 0) {
+            return;
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!ActiveStates.hasPassive(player.getUUID(), Card.GONGSHI) || !player.hasEffect(MobEffects.SPEED)) {
+                continue;
+            }
+            Vec3 delta = player.getDeltaMovement();
+            if (delta.x * delta.x + delta.z * delta.z > 0.004) {
+                player.level().sendParticles(CardFx.WHITE,
+                    player.getX() + (player.getRandom().nextDouble() - 0.5) * 0.6,
+                    player.getY() + 0.1,
+                    player.getZ() + (player.getRandom().nextDouble() - 0.5) * 0.6,
+                    2, 0.1, 0.05, 0.1, 0.01);
+            }
+        }
+    }
+
+    /** 恶煞：每个负面效果提供 1 级生命恢复。 */
+    private static void tickEsha(MinecraftServer server, long now) {
+        if (now % 40 != 0) {
+            return;
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!ActiveStates.hasPassive(player.getUUID(), Card.ESHA)) {
+                continue;
+            }
+            int harmful = 0;
+            for (var instance : player.getActiveEffects()) {
+                if (instance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
+                    harmful++;
+                }
+            }
+            if (harmful > 0) {
+                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, harmful - 1, true, false));
+            }
+        }
+    }
+
+
+    /** 蓄势：技能就绪时以 0.3s/0.8s 交替节奏向持有者播放心跳气泡音。 */
+    private static void tickXushiHeartbeat(MinecraftServer server, long now) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!ActiveStates.hasPassive(player.getUUID(), Card.XUSHI)) {
+                continue;
+            }
+            Long last = ActiveStates.lastMelee(player.getUUID());
+            boolean armed = last == null || now - last >= CardConfig.XUSHI_IDLE_TICKS;
+            var sound = ActiveStates.xushiSound().get(player.getUUID());
+            if (!armed) {
+                ActiveStates.xushiSound().remove(player.getUUID());
+                continue;
+            }
+            if (sound == null) {
+                ActiveStates.xushiSound().put(player.getUUID(), new ActiveStates.XushiBeat(now + CardConfig.XUSHI_SOUND_MIN_TICKS, false));
+                continue;
+            }
+            if (now >= sound.until()) {
+                player.playSound(SoundEvents.BUBBLE_POP, 0.8F, sound.alternate() ? 1.2F : 0.9F);
+                ActiveStates.xushiSound().put(player.getUUID(),
+                    sound.alternate() ? new ActiveStates.XushiBeat(now + CardConfig.XUSHI_SOUND_MAX_TICKS, false)
+                        : new ActiveStates.XushiBeat(now + CardConfig.XUSHI_SOUND_MIN_TICKS, true));
+            }
+        }
+    }
+
+    /** 法轮：负面效果持续追踪；满 30 秒达成适应并播放音波粒子。 */
+    private static void tickFalun(MinecraftServer server, long now) {
+        if (now % 20 != 0) {
+            return;
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!ActiveStates.hasPassive(player.getUUID(), Card.FALUN)) {
+                continue;
+            }
+            var firstSeen = ActiveStates.falunFirst().computeIfAbsent(player.getUUID(), k -> new java.util.HashMap<>());
+            var adapted = ActiveStates.falunAdapted(player.getUUID());
+            java.util.Set<Holder<MobEffect>> active = new java.util.HashSet<>();
+            for (var instance : player.getActiveEffects()) {
+                if (instance.getEffect().value().getCategory() != MobEffectCategory.HARMFUL) {
+                    continue;
+                }
+                Holder<MobEffect> effect = instance.getEffect();
+                active.add(effect);
+                firstSeen.putIfAbsent(effect, now);
+                if (now - firstSeen.get(effect) >= CardConfig.FALUN_ADAPT_TICKS && adapted.add(effect)) {
+                    FaLunCard.adaptFx(player);
+                    ActiveStates.falunFx().put(player.getUUID(), now + 20);
+                }
+            }
+            firstSeen.keySet().removeIf(effect -> !active.contains(effect));
+            adapted.removeIf(effect -> !active.contains(effect));
+        }
+    }
+
+    /** 法轮适应粒子的短窗口播放。 */
+    private static void tickFalunFx(long now) {
+        var iterator = ActiveStates.falunFx().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (now >= entry.getValue()) {
+                iterator.remove();
+                continue;
+            }
+            if (now % 4 == 0) {
+                ServerPlayer player = ActiveStates.player(entry.getKey());
+                if (player != null) {
+                    player.level().sendParticles(net.minecraft.core.particles.ParticleTypes.SONIC_BOOM,
+                        player.getX() + (player.getRandom().nextDouble() - 0.5) * 1.2,
+                        player.getEyeY() + 0.4,
+                        player.getZ() + (player.getRandom().nextDouble() - 0.5) * 1.2,
+                        1, 0.0, 0.0, 0.0, 0.0);
+                }
+            }
+        }
+    }
+
+    /** 臂章：6 秒后移除吸收并返还生命。 */
+    private static void tickBizhang(long now) {
+        var iterator = ActiveStates.bizhangs().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (now < entry.getValue().until()) {
+                continue;
+            }
+            iterator.remove();
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (player != null) {
+                BizhangCard.restore(player, entry.getValue().deducted());
+            }
+        }
+    }
+
+    /** 吊射：窗口结算 + 箭雨区推进。 */
+    private static void tickRainZones(MinecraftServer server, long now) {
+        ActiveStates.diaosheWindows().entrySet().removeIf(entry -> now >= entry.getValue());
+        var iterator = ActiveStates.rainZones().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            ActiveStates.RainZone zone = entry.getValue();
+            if (now >= zone.until()) {
+                iterator.remove();
+                continue;
+            }
+            if (!(server.getLevel(zone.dimension()) instanceof ServerLevel level)) {
+                iterator.remove();
+                continue;
+            }
+            if (now % CardConfig.DIAOSHE_RAIN_INTERVAL_TICKS == 0) {
+                DiaoSheCard.tickRain(level, zone);
+            }
+        }
+    }
+
+    // ==================== 新卡事件监听 ====================
+
+    /** 多重箭：玩家射出的箭进入世界时克隆 2 支带散布的箭（跳过雨箭与克隆箭）。 */
+    public static void onArrowJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Arrow arrow)) {
+            return;
+        }
+        if (arrow.pickup != AbstractArrow.Pickup.ALLOWED
+            || !(arrow.getOwner() instanceof ServerPlayer shooter)) {
+            return;
+        }
+        if (!ActiveStates.hasPassive(shooter.getUUID(), Card.DUOCHONG)) {
+            return;
+        }
+        DuochongCard.spawnClones(shooter, arrow);
+    }
+
+    /** 遁走之术：获得隐身时强化移动（不覆盖更高的已有药效）。 */
+    public static void onEffectAdded(MobEffectEvent.Added event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+            || !ActiveStates.hasPassive(player.getUUID(), Card.DUNZOU)) {
+            return;
+        }
+        var instance = event.getEffectInstance();
+        if (instance != null && instance.getEffect().equals(MobEffects.INVISIBILITY)) {
+            int dur = Math.max(instance.getDuration(), 20 * 30);
+            player.addEffect(new MobEffectInstance(MobEffects.SPEED, dur, 1));
+            player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, dur, 2));
+        }
+    }
+
+    /** 法轮：已适应的负面效果不再施加。 */
+    public static void onEffectApplicable(MobEffectEvent.Applicable event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+            || !ActiveStates.hasPassive(player.getUUID(), Card.FALUN)) {
+            return;
+        }
+        var instance = event.getEffectInstance();
+        if (instance == null || !FaLunCard.isHarmful(instance.getEffect())) {
+            return;
+        }
+        var firstSeen = ActiveStates.falunFirst().get(player.getUUID());
+        if (firstSeen != null) {
+            Long seen = firstSeen.get(instance.getEffect());
+            if (seen != null && ActiveStates.now() - seen >= CardConfig.FALUN_ADAPT_TICKS) {
+                event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+            }
+        }
+    }
+
+    /** 吊射：满蓄力弓射击标记（供落点判定）。 */
+    public static void onArrowLoose(ArrowLooseEvent event) {
+        if (event.getLevel().isClientSide() || !event.hasAmmo()) {
+            return;
+        }
+        if (ActiveStates.diaosheActive(event.getEntity().getUUID(), ActiveStates.now())
+            && event.getCharge() >= 20) {
+            FULL_BOW_SHOTS.put(event.getEntity().getUUID(), ActiveStates.now() + 40);
+        }
+    }
+
+    /** 吊射：箭矢落点触发箭雨。 */
+    public static void onProjectileImpact(ProjectileImpactEvent event) {
+        if (event.getProjectile().level().isClientSide()
+            || event.getRayTraceResult().getType() != HitResult.Type.BLOCK
+            || !(event.getProjectile() instanceof Arrow arrow)
+            || arrow.pickup != AbstractArrow.Pickup.ALLOWED
+            || !(arrow.getOwner() instanceof ServerPlayer shooter)) {
+            return;
+        }
+        long now = ActiveStates.now();
+        boolean crossbow = arrow.getWeaponItem() != null
+            && arrow.getWeaponItem().is(net.minecraft.world.item.Items.CROSSBOW);
+        Long bowUntil = FULL_BOW_SHOTS.get(shooter.getUUID());
+        boolean fullBow = bowUntil != null && now < bowUntil;
+        if (ActiveStates.diaosheActive(shooter.getUUID(), now) && (crossbow || fullBow)) {
+            DiaoSheCard.spawnRain(shooter, arrow.position());
+        }
+    }
+
     // ==================== 盲点：发光压制 ====================
 
     /** 逐刻压制自己身上的发光（Manhunt 每 40 刻重挂，需持续移除）；结束后由 Manhunt 刷新自然恢复。 */
@@ -574,13 +869,82 @@ public final class CardEvents {
                 event.setNewDamage(event.getNewDamage() * CardConfig.QINGLONG_FALL_REDUCTION);
             }
         }
+
+        // 灼烧：着火目标受到的火焰伤害每层 +1 点
+        if (event.getSource().is(DamageTypeTags.IS_FIRE) && event.getEntity().isOnFire()) {
+            int scorchLayers = GlobalEffects.scorchLayers(event.getEntity());
+            if (scorchLayers > 0) {
+                event.setNewDamage(event.getNewDamage() + scorchLayers);
+            }
+        }
+
+        // 攻击方增益结算
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) {
             return;
         }
-        if (!ActiveStates.consumePunish(attacker.getUUID())) {
-            return;
+        java.util.Set<Card> passives = ActiveStates.passives(attacker.getUUID());
+        DamageSource damageSource = event.getSource();
+        Entity direct = damageSource.getDirectEntity();
+        boolean melee = direct != null && direct == damageSource.getEntity() && direct instanceof LivingEntity;
+
+        double damage = event.getNewDamage();
+        double additive = 0.0;
+        double multiplier = 1.0;
+
+        // 攻势：正在移动且拥有迅捷 → 每级 +2 点
+        if (passives.contains(Card.GONGSHI) && attacker.hasEffect(MobEffects.SPEED)) {
+            Vec3 delta = attacker.getDeltaMovement();
+            if (delta.x * delta.x + delta.z * delta.z > 0.004) {
+                additive += CardConfig.GONGSHI_DAMAGE_PER_LEVEL
+                    * (attacker.getEffect(MobEffects.SPEED).getAmplifier() + 1);
+            }
         }
-        event.setNewDamage(CardConfig.SHENFA_DAMAGE);
+        // 圆满：生命高于 80% → +2 点
+        if (passives.contains(Card.YUANMAN)
+            && attacker.getHealth() > attacker.getMaxHealth() * CardConfig.YUANMAN_HEALTH_RATIO) {
+            additive += CardConfig.YUANMAN_DAMAGE_BONUS;
+        }
+        // 哨兵：投射物命中低处的目标 → +2 点
+        if (passives.contains(Card.SHAOBING) && direct instanceof Projectile
+            && event.getEntity().getY() < attacker.getY()) {
+            additive += CardConfig.SHAOBING_DAMAGE_BONUS;
+        }
+        if (melee) {
+            // 狂剑：每层 +1 点
+            additive += KuangwuCard.kuangjianLayers(attacker);
+            // 重压：跳跃攻击暴击倍率 1.5 → 2.0
+            if (passives.contains(Card.ZHONGYA) && !attacker.onGround() && attacker.fallDistance > 0) {
+                multiplier *= CardConfig.ZHONGYA_CRIT_MULTIPLIER / 1.5;
+                if (event.getEntity().level() instanceof ServerLevel spLevel) {
+                    spLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.WARPED_SPORE,
+                        event.getEntity().getX(), event.getEntity().getY() + 1.0, event.getEntity().getZ(),
+                        12, 0.4, 0.3, 0.4, 0.02);
+                }
+            }
+            // 蓄势：20 秒未造成近战伤害 → 翻倍
+            if (passives.contains(Card.XUSHI)) {
+                Long last = ActiveStates.lastMelee(attacker.getUUID());
+                if (last == null || ActiveStates.now() - last >= CardConfig.XUSHI_IDLE_TICKS) {
+                    multiplier *= CardConfig.XUSHI_MULTIPLIER;
+                    ActiveStates.setLastMelee(attacker.getUUID(), ActiveStates.now());
+                }
+            }
+            // 背刺：攻击背对自身的玩家 → 1.5 倍
+            if (passives.contains(Card.BEISHI) && event.getEntity() instanceof ServerPlayer victim) {
+                Vec3 look = victim.getLookAngle();
+                Vec3 toAttacker = attacker.position().subtract(victim.position());
+                if (look.x * toAttacker.x + look.z * toAttacker.z < 0) {
+                    multiplier *= CardConfig.BEISHI_MULTIPLIER;
+                }
+            }
+        }
+
+        // 神罚：下一次攻击固定 20 点
+        if (ActiveStates.consumePunish(attacker.getUUID())) {
+            damage = CardConfig.SHENFA_DAMAGE;
+        }
+
+        event.setNewDamage((float) ((damage + additive) * multiplier));
     }
 
     // ==================== 魔兔：分裂 / AI / 目标过滤 ====================
@@ -594,6 +958,40 @@ public final class CardEvents {
             if (huskarUntil != null && ActiveStates.now() < huskarUntil) {
                 HuskarCard.payCost(huskarAttacker);
             }
+        }
+        DamageSource damageSource = event.getSource();
+        boolean meleeHit = damageSource.getEntity() instanceof ServerPlayer
+            && damageSource.getDirectEntity() == damageSource.getEntity()
+            && event.getInflictedDamage() > 0;
+        // 蓄势：记录近战命中时刻
+        if (meleeHit) {
+            ActiveStates.setLastMelee(((ServerPlayer) damageSource.getEntity()).getUUID(), ActiveStates.now());
+        }
+        // 狂舞：近战命中叠剑舞并转换狂剑；鬼人：命中再叠 1 层
+        if (meleeHit && damageSource.getEntity() instanceof ServerPlayer dancer) {
+            if (ActiveStates.hasPassive(dancer.getUUID(), Card.KUANGWU)) {
+                KuangwuCard.onMeleeHit(dancer);
+            }
+            if (ActiveStates.guiren(dancer.getUUID()) != null) {
+                GlobalEffects.addDance(dancer, 1);
+            }
+        }
+        // 沸血之矛：命中扣血 + 点燃 + 灼烧
+        if (meleeHit && damageSource.getEntity() instanceof ServerPlayer feixueAttacker
+            && ActiveStates.hasPassive(feixueAttacker.getUUID(), Card.FEIXUE)
+            && event.getEntity() instanceof LivingEntity feixueTarget) {
+            FeiXueCard.payAndIgnite(feixueAttacker, feixueTarget);
+        }
+        // 荆棘：受到近战攻击反弹 2 点（荆棘来源不再反弹，防止互相刷）
+        if (event.getEntity() instanceof ServerPlayer thornsVictim
+            && ActiveStates.hasPassive(thornsVictim.getUUID(), Card.ZHENJI)
+            && !damageSource.is(DamageTypes.THORNS)
+            && damageSource.getDirectEntity() instanceof LivingEntity meleeAttacker
+            && meleeAttacker != thornsVictim
+            && thornsVictim.distanceToSqr(meleeAttacker) <= 16.0
+            && thornsVictim.level() instanceof ServerLevel thornsLevel) {
+            meleeAttacker.hurtServer(thornsLevel, thornsLevel.damageSources().thorns(thornsVictim),
+                CardConfig.ZHENJI_REFLECT_DAMAGE);
         }
         if (!(event.getSource().getDirectEntity() instanceof Rabbit rabbit)
             || !(rabbit.level() instanceof ServerLevel level)) {

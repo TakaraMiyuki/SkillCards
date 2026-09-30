@@ -22,7 +22,7 @@ public final class CardConfig {
     public static final double ZHANFANG_KNOCKBACK_HORIZONTAL = 1.6; // 击飞约5~6格
     public static final double ZHANFANG_KNOCKBACK_VERTICAL = 0.5;
     public static final int ZHANFANG_ABSORPTION_DURATION_TICKS = 30 * 20;
-    public static final int ZHANFANG_ABSORPTION_AMPLIFIER = 9; // 等级10
+    public static final int ZHANFANG_ABSORPTION_AMPLIFIER = 4; // 等级5
 
     // ==================== 神罚：下一次攻击造成20点伤害，持续30秒 ====================
     public static final float SHENFA_DAMAGE = 20.0F;
@@ -46,7 +46,7 @@ public final class CardConfig {
 
     // ==================== 麒麟：精准雷击周围10格的猎人，每个猎人两道，间隔1秒 ====================
     public static final double QILIN_RADIUS = 10.0;
-    public static final int QILIN_STRIKE_COUNT = 3;             // 每个目标三道雷
+    public static final int QILIN_STRIKE_COUNT = 2;             // 每个目标两道雷
     public static final int QILIN_STRIKE_INTERVAL_TICKS = 10;   // 每道间隔0.5秒
 
     // ==================== 三世秘传：范围内每个猎人各被偷一组 ====================
@@ -77,7 +77,7 @@ public final class CardConfig {
     // ==================== 圣树化身：生命恢复3 x 60秒 + 虚弱2 x 60秒 ====================
     public static final int SHENGSHU_DURATION_TICKS = 60 * 20;
     public static final int SHENGSHU_REGENERATION_AMPLIFIER = 2; // 等级3
-    public static final int SHENGSHU_WEAKNESS_AMPLIFIER = 1; // 等级2
+    public static final int SHENGSHU_WEAKNESS_AMPLIFIER = 0; // 等级1
 
     // ==================== 赤鳞之跃动：分段扣血20点 + 30秒五强化 ====================
     /** 赤鳞之跃动：发动扣除的生命值（现值不足则扣至最后 2 点）。 */
@@ -137,7 +137,7 @@ public final class CardConfig {
 
     // ==================== 青龙形态 ====================
     public static final int QINGLONG_DURATION_TICKS = 30 * 20;
-    public static final int QINGLONG_JUMP_AMPLIFIER = 4;  // 等级5
+    public static final int QINGLONG_JUMP_AMPLIFIER = 5;  // 等级6
     public static final int QINGLONG_SPEED_AMPLIFIER = 2; // 等级3
     public static final float QINGLONG_FALL_REDUCTION = 0.5F; // 落地伤害减半
 
@@ -146,6 +146,52 @@ public final class CardConfig {
     public static final int GUOZAI_SPEED_AMPLIFIER = 2;        // 等级3
     public static final double GUOZAI_ATTACK_SPEED_BONUS = 0.30; // 攻速+30%
     public static final int GUOZAI_AFTER_SLOWNESS_TICKS = 10 * 20;
+
+    // ==================== 全局效果：灼烧 ====================
+    public static final int SCORCH_MAX_LAYERS = 5;
+    public static final int SCORCH_STACK_INTERVAL_TICKS = 60;      // 着火时每3秒自动+1层
+    public static final int SCORCH_WINDOW_AFTER_FIRE_TICKS = 60;   // 火熄灭后再存续3秒
+
+    // ==================== 全局效果：剑舞 ====================
+    public static final int DANCE_MAX_LAYERS = 20;
+    public static final double DANCE_SPEED_PER_LAYER = 0.03;       // 每层+3%近战攻速
+    public static final int DANCE_DURATION_TICKS = 60;             // 每次叠加后存续3秒
+
+    // ==================== 被动卡 ====================
+    public static final int GONGSHI_DAMAGE_PER_LEVEL = 2;  // 攻势：每级迅捷+2点
+    public static final float ZHENJI_REFLECT_DAMAGE = 2.0F; // 荆棘：反弹伤害
+    public static final double ZHONGYA_CRIT_MULTIPLIER = 2.0; // 重压：跳劈倍率 1.5→2.0
+    public static final int XUSHI_IDLE_TICKS = 20 * 20;      // 蓄势：20秒未近战
+    public static final double XUSHI_MULTIPLIER = 2.0;       // 蓄势：下一击翻倍
+    public static final int XUSHI_SOUND_MIN_TICKS = 6;       // 蓄势心跳：0.3秒
+    public static final int XUSHI_SOUND_MAX_TICKS = 16;      // 蓄势心跳：0.8秒
+    public static final double YUANMAN_HEALTH_RATIO = 0.8;   // 圆满：生命>80%
+    public static final int YUANMAN_DAMAGE_BONUS = 2;        // 圆满：+2点
+    public static final int SHAOBING_DAMAGE_BONUS = 2;       // 哨兵：低处目标+2点
+    public static final double BEISHI_MULTIPLIER = 1.5;      // 背刺：1.5倍
+    public static final int DUOCHONG_EXTRA_ARROWS = 2;       // 多重箭：额外2支（共3支）
+    public static final double DUOCHONG_SPREAD = 0.08;       // 多重箭散布强度
+    public static final int FALUN_ADAPT_TICKS = 30 * 20;     // 法轮：持续30秒后免疫
+
+    // ==================== 鬼人 / 沸血之矛 / 狂舞 ====================
+    public static final int GUIREN_DURATION_TICKS = 30 * 20;
+    public static final int GUIREN_INSTANT_LAYERS = 12;
+    public static final int FEIXUE_FIRE_SECONDS = 4;
+    public static final int KUANGWU_CLEAR_TICKS = 30;        // 1.5秒没叠剑舞清空狂剑
+    public static final int KUANGWU_DANCE_PER_CONVERT = 4;   // 每4层剑舞换1层狂剑
+
+    // ==================== 燃火 / 臂章 / 吊射 ====================
+    public static final double RANHUO_RADIUS = 3.0;
+    public static final int RANHUO_FIRE_SECONDS = 10;
+    public static final int RANHUO_SCORCH_CONVERT_DAMAGE = 6; // 每层灼烧转换的火焰伤害
+    public static final double BIZHANG_RATIO = 0.8;          // 臂章：扣除80%生命
+    public static final int BIZHANG_DURATION_TICKS = 6 * 20;
+    public static final int DIAOSHE_WINDOW_TICKS = 30 * 20;  // 吊射：30秒发动窗口
+    public static final int DIAOSHE_RAIN_DURATION_TICKS = 3 * 20;
+    public static final int DIAOSHE_RAIN_INTERVAL_TICKS = 4;
+    public static final double DIAOSHE_ARROW_DAMAGE = 6.0;
+    public static final int DIAOSHE_RAIN_HEIGHT = 20;
+    public static final double DIAOSHE_HALF_AREA = 1.0;      // 3×3 半宽1格
 
     // ==================== 通用 ====================
     public static final double PARTICLE_FRONT_OFFSET = 0.5; // 全体粒子释放位置向玩家身前偏移（半身位）

@@ -31,6 +31,11 @@ public final class SkillCardsMod {
         NeoForge.EVENT_BUS.addListener(CardEvents::onPlayerRespawn);
         NeoForge.EVENT_BUS.addListener(CardEvents::onDimensionChange);
         NeoForge.EVENT_BUS.addListener(CardEvents::onPlayerLoggedOut);
+        NeoForge.EVENT_BUS.addListener(CardEvents::onArrowJoin);
+        NeoForge.EVENT_BUS.addListener(CardEvents::onEffectAdded);
+        NeoForge.EVENT_BUS.addListener(CardEvents::onEffectApplicable);
+        NeoForge.EVENT_BUS.addListener(CardEvents::onArrowLoose);
+        NeoForge.EVENT_BUS.addListener(CardEvents::onProjectileImpact);
         NeoForge.EVENT_BUS.addListener(com.example.skillcards.command.SkillCardsCommand::onRegisterCommands);
 
         LOGGER.info("[SkillCards] 技能卡模组初始化完成（14 张卡）");
