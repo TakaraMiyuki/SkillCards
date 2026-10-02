@@ -22,6 +22,14 @@ public final class CardState {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
         DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, SkillCardsMod.MODID);
 
+    /** 多重箭：克隆箭标记（用于吊射联动与雨箭识别）。 */
+    public static final Supplier<AttachmentType<Boolean>> DUOCHONG_CLONE =
+        ATTACHMENTS.register("duochong_clone", () -> AttachmentType.builder(() -> false).build());
+
+    /** 吊射：雨箭标记（伤害固定 6 点，不受下落加速影响）。 */
+    public static final Supplier<AttachmentType<Boolean>> RAIN_ARROW =
+        ATTACHMENTS.register("rain_arrow", () -> AttachmentType.builder(() -> false).build());
+
     /** 魔兔标记：归属者、施法批次与到期时间。 */
     public record BunnyMark(UUID owner, UUID castId, long expiry) {
         public static final MapCodec<BunnyMark> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(

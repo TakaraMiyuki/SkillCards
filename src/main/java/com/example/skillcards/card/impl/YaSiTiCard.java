@@ -96,6 +96,8 @@ public final class YaSiTiCard {
             CardFx.burst(level, x + 0.5, y + 1.0, z + 0.5, ParticleTypes.PORTAL, 60, 0.8, 0.6);
             CardFx.burst(level, x + 0.5, y + 1.0, z + 0.5, ParticleTypes.REVERSE_PORTAL, 30, 0.5, 0.4);
             CardFx.sound(level, x + 0.5, y, z + 0.5, SoundEvents.ENDERMAN_TELEPORT);
+            // 传送成功才进入冷却
+            com.example.skillcards.item.SkillCardItem.applyCooldown(player, Card.YASITI);
             return true;
         }
         CardFx.hint(player, "找不到安全的落点，传送失败");

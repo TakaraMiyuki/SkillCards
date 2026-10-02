@@ -21,14 +21,15 @@ public final class RanhuoCard {
         ServerLevel level = player.level();
         Vec3 look = player.getLookAngle().normalize();
         int hits = 0;
-        for (var target : level.getEntities(player, player.getBoundingBox().inflate(CardConfig.RANHUO_RADIUS + 1),
-                e -> e instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive()
-                    && e != player && e.distanceToSqr(player) <= CardConfig.RANHUO_RADIUS * CardConfig.RANHUO_RADIUS)) {
+        // 3（宽）×4（长）矩形区域：沿目视方向前方 4 格、左右各 1.5 格、高度差 ±2 格
+        for (var target : level.getEntities(player, player.getBoundingBox().inflate(6),
+                e -> e instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive() && e != player)) {
             Vec3 to = target.position().subtract(player.position());
-            double horizontal = Math.sqrt(to.x * to.x + to.z * to.z);
-            double dot = horizontal < 0.01 ? 1.0
-                : (to.x / horizontal * look.x + to.z / horizontal * look.z);
-            if (dot < 0.35) { // 扇形半角约 70°
+            double forward = to.x * look.x + to.z * look.z;
+            double perpX = to.x - look.x * forward, perpZ = to.z - look.z * forward;
+            if (forward < 0 || forward > CardConfig.RANHUO_LENGTH
+                || perpX * perpX + perpZ * perpZ > CardConfig.RANHUO_HALF_WIDTH * CardConfig.RANHUO_HALF_WIDTH
+                || Math.abs(to.y) > 2) {
                 continue;
             }
             var living = (net.minecraft.world.entity.LivingEntity) target;
@@ -36,30 +37,33 @@ public final class RanhuoCard {
             float convert = layers * CardConfig.RANHUO_SCORCH_CONVERT_DAMAGE;
             if (convert > 0) {
                 GlobalEffects.addScorch(living, -layers); // 清空
-                living.hurtServer(level, player.damageSources().playerAttack(player), convert);
+                // 灼烧清空后的转换结算（数值上等同于火焰伤害；用 playerAttack 保留击杀归属与战利品）
+                boolean applied = living.hurtServer(level, player.damageSources().playerAttack(player), convert);
+                if (CardConfig.DEBUG_LOGGING) {
+                    com.mojang.logging.LogUtils.getLogger().info(
+                        "[SkillCards][燃火] {} 灼烧转化：{} 层 × 6 = {} 点伤害，实际结算:{}",
+                        living.getName().getString(), layers, convert, applied);
+                }
             }
             living.igniteForSeconds(CardConfig.RANHUO_FIRE_SECONDS);
             GlobalEffects.addScorch(living, 1);
             hits++;
         }
-        // 大量团状火焰粒子（身前锥形）
-        Vec3 front = CardFx.frontPos(player);
-        for (int i = 0; i < 60; i++) {
-            double angle = player.getRandom().nextDouble() * Math.PI * 2;
-            double dist = player.getRandom().nextDouble() * CardConfig.RANHUO_RADIUS;
-            level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME,
-                front.x + Math.cos(angle) * dist, front.y + player.getRandom().nextDouble() * 1.2,
-                front.z + Math.sin(angle) * dist, 1, 0.0, 0.02, 0.0, 0.02);
-            level.sendParticles(net.minecraft.core.particles.ParticleTypes.SMALL_FLAME,
-                front.x + Math.cos(angle) * dist, front.y + player.getRandom().nextDouble() * 1.2,
-                front.z + Math.sin(angle) * dist, 1, 0.0, 0.02, 0.0, 0.02);
+        // 3×4 矩形区域内铺满火焰粒子（宽3：左右各1.5格；长4：前方0~4格）
+        for (int len = 0; len <= 8; len++) {
+            double f = len * 0.5;
+            for (int wid = -3; wid <= 3; wid++) {
+                double p = wid * 0.5;
+                double x = player.getX() + look.x * f + -look.z * p;
+                double z = player.getZ() + look.z * f + look.x * p;
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME,
+                    x, player.getY() + 0.3, z, 2, 0.15, 0.25, 0.15, 0.01);
+            }
         }
         CardFx.sound(level, player.getX(), player.getY(), player.getZ(), SoundEvents.BLAZE_SHOOT);
-        if (hits > 0) {
-            CardFx.announce(player, "发动", Card.RANHUO);
-        } else {
+        CardFx.announce(player, "发动", Card.RANHUO);
+        if (hits == 0) {
             CardFx.hint(player, "扇形范围内没有目标");
-            return false;
         }
         return true;
     }

@@ -140,6 +140,21 @@ public enum Card {
         return action.apply(player);
     }
 
+    /** 冷却是否延迟结算（如亚丝缇的赐福：传送成功才进冷却）。 */
+    public boolean deferredCooldown() {
+        return this == YASITI;
+    }
+
+    /** 关联的全局效果（tooltip 中单独展示其描述）。键见 lang：global.skillcards.* */
+    public java.util.List<String> linkedGlobals() {
+        return switch (this) {
+            case KUANGWU -> java.util.List.of("dance", "kuangjian");
+            case GUIREN -> java.util.List.of("dance");
+            case QILIN, RANHUO, FEIXUE -> java.util.List.of("scorch");
+            default -> java.util.List.of();
+        };
+    }
+
     /** 卡牌类型：主动（右键发动）/ 被动（背包内自动生效）。 */
     public enum Type {
         ACTIVE, PASSIVE

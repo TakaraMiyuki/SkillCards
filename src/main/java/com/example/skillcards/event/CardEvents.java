@@ -76,6 +76,7 @@ public final class CardEvents {
     private CardEvents() {}
 
     private static final Map<UUID, Long> FULL_BOW_SHOTS = new java.util.HashMap<>(); // 吊射：满蓄力弓射击标记
+    private static final Map<UUID, Long> LAST_FX_SENT = new java.util.HashMap<>();  // HUD：上次发送的层数包
 
     // ==================== 生命周期 ====================
 
@@ -460,7 +461,28 @@ public final class CardEvents {
             // 饰品栏（Curios）中的被动卡同样生效
             com.example.skillcards.compat.CuriosBridge.collectPassives(player, found);
             ActiveStates.setPassives(player.getUUID(), found);
+            // 法轮：未装备（背包/副手/饰品栏都没有）时清空适应记录，重新装备后重新适应
+            if (!found.contains(Card.FALUN)) {
+                ActiveStates.falunFirst().remove(player.getUUID());
+                ActiveStates.falunAdapted().remove(player.getUUID());
+            }
+            syncGlobalFx(player);
         }
+    }
+
+    /** 全局效果层数同步：变化才发包（HUD 用）。 */
+    private static void syncGlobalFx(ServerPlayer player) {
+        int dance = GlobalEffects.danceLayers(player);
+        int kuangjian = KuangwuCard.kuangjianLayers(player);
+        int scorch = GlobalEffects.scorchLayers(player);
+        long packed = ((long) dance << 20) | ((long) kuangjian << 10) | scorch;
+        Long last = LAST_FX_SENT.get(player.getUUID());
+        if (last != null && last == packed) {
+            return;
+        }
+        LAST_FX_SENT.put(player.getUUID(), packed);
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+            new com.example.skillcards.network.GlobalFxPayload(dance, kuangjian, scorch));
     }
 
     /** 攻势：正在移动且拥有迅捷时，脚下零散白色粒子。 */
@@ -499,7 +521,13 @@ public final class CardEvents {
                 }
             }
             if (harmful > 0) {
-                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, harmful - 1, true, false));
+                // ambient=true 不刷粒子，visible=true 让图标显示（之前 visible=false 导致看不出效果）
+                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, harmful - 1, true, true));
+                if (CardConfig.DEBUG_LOGGING && now % 200 == 0) {
+                    com.mojang.logging.LogUtils.getLogger().info(
+                        "[SkillCards][恶煞] {} 当前 {} 个负面效果 → 生命恢复 {} 级",
+                        player.getName().getString(), harmful, harmful);
+                }
             }
         }
     }
@@ -519,11 +547,26 @@ public final class CardEvents {
                 continue;
             }
             if (sound == null) {
+                // 刚进入"就绪"：右手小爆发 + 开始心跳
+                Vec3 look = player.getLookAngle().normalize();
+                Vec3 hand = player.position().add(look.scale(0.45))
+                    .add(-look.z * 0.3, 1.2, look.x * 0.3);
+                if (player.level() instanceof ServerLevel level) {
+                    level.sendParticles(CardFx.WHITE, hand.x, hand.y, hand.z, 8, 0.15, 0.1, 0.15, 0.02);
+                    level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                        hand.x, hand.y, hand.z, 5, 0.1, 0.08, 0.1, 0.02);
+                }
                 ActiveStates.xushiSound().put(player.getUUID(), new ActiveStates.XushiBeat(now + CardConfig.XUSHI_SOUND_MIN_TICKS, false));
                 continue;
             }
             if (now >= sound.until()) {
                 player.playSound(SoundEvents.BUBBLE_POP, 0.8F, sound.alternate() ? 1.2F : 0.9F);
+                Vec3 look = player.getLookAngle().normalize();
+                Vec3 hand = player.position().add(look.scale(0.45))
+                    .add(-look.z * 0.3, 1.2, look.x * 0.3);
+                if (player.level() instanceof ServerLevel level) {
+                    level.sendParticles(CardFx.WHITE, hand.x, hand.y, hand.z, 3, 0.1, 0.06, 0.1, 0.02);
+                }
                 ActiveStates.xushiSound().put(player.getUUID(),
                     sound.alternate() ? new ActiveStates.XushiBeat(now + CardConfig.XUSHI_SOUND_MAX_TICKS, false)
                         : new ActiveStates.XushiBeat(now + CardConfig.XUSHI_SOUND_MIN_TICKS, true));
@@ -551,12 +594,23 @@ public final class CardEvents {
                 active.add(effect);
                 firstSeen.putIfAbsent(effect, now);
                 if (now - firstSeen.get(effect) >= CardConfig.FALUN_ADAPT_TICKS && adapted.add(effect)) {
+                    // 达成适应：立刻移除当前持续中的该负面效果（此后新的施加也会被 Applicable 拦截）
+                    player.removeEffect(effect);
                     FaLunCard.adaptFx(player);
                     ActiveStates.falunFx().put(player.getUUID(), now + 20);
+                    if (CardConfig.DEBUG_LOGGING) {
+                        com.mojang.logging.LogUtils.getLogger().info(
+                            "[SkillCards][法轮] {} 已适应负面效果 {}（此后免疫）",
+                            player.getName().getString(), effect.value().getDescriptionId());
+                    }
+                }
+                // 已适应的效果：持续移除（保证"不会再受到该效果影响"）
+                if (adapted.contains(effect) && player.hasEffect(effect)) {
+                    player.removeEffect(effect);
                 }
             }
-            firstSeen.keySet().removeIf(effect -> !active.contains(effect));
-            adapted.removeIf(effect -> !active.contains(effect));
+            // 尚未适应的效果中断后重置计时；已适应的持久保留（重新施加直接免疫）
+            firstSeen.keySet().removeIf(effect -> !active.contains(effect) && !adapted.contains(effect));
         }
     }
 
@@ -621,12 +675,13 @@ public final class CardEvents {
 
     // ==================== 新卡事件监听 ====================
 
-    /** 多重箭：玩家射出的箭进入世界时克隆 2 支带散布的箭（跳过雨箭与克隆箭）。 */
+    /** 多重箭：玩家射出的箭进入世界时克隆 2 支带散布的箭（跳过雨箭与克隆箭——它们没有武器来源）。 */
     public static void onArrowJoin(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Arrow arrow)) {
             return;
         }
-        if (arrow.pickup != AbstractArrow.Pickup.ALLOWED
+        // 只认"由武器射出"的箭：雨箭/克隆箭没有武器来源，天然跳过，也不会递归
+        if (arrow.getWeaponItem() == null
             || !(arrow.getOwner() instanceof ServerPlayer shooter)) {
             return;
         }
@@ -680,23 +735,43 @@ public final class CardEvents {
         }
     }
 
-    /** 吊射：箭矢落点触发箭雨。 */
+    /** 吊射：箭矢命中方块（落点）或命中实体（实体所在地）都触发箭雨；一根箭只触发一场。 */
     public static void onProjectileImpact(ProjectileImpactEvent event) {
         if (event.getProjectile().level().isClientSide()
-            || event.getRayTraceResult().getType() != HitResult.Type.BLOCK
             || !(event.getProjectile() instanceof Arrow arrow)
-            || arrow.pickup != AbstractArrow.Pickup.ALLOWED
             || !(arrow.getOwner() instanceof ServerPlayer shooter)) {
             return;
         }
-        long now = ActiveStates.now();
-        boolean crossbow = arrow.getWeaponItem() != null
-            && arrow.getWeaponItem().is(net.minecraft.world.item.Items.CROSSBOW);
-        Long bowUntil = FULL_BOW_SHOTS.get(shooter.getUUID());
-        boolean fullBow = bowUntil != null && now < bowUntil;
-        if (ActiveStates.diaosheActive(shooter.getUUID(), now) && (crossbow || fullBow)) {
-            DiaoSheCard.spawnRain(shooter, arrow.position());
+        if (DiaoSheCard.alreadyTriggered(arrow)) {
+            return;
         }
+        long now = ActiveStates.now();
+        boolean weaponArrow = arrow.getWeaponItem() != null;
+        boolean cloneArrow = Boolean.TRUE.equals(arrow.getData(com.example.skillcards.data.CardState.DUOCHONG_CLONE));
+        Vec3 center = arrow.position();
+        if (event.getRayTraceResult().getType() == HitResult.Type.ENTITY
+            && event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult entityHit) {
+            center = entityHit.getEntity().position(); // 命中实体：以实体当时的所在地为目标
+        }
+        if (weaponArrow) {
+            // 普通武器箭：弩或满蓄力弓触发
+            boolean crossbow = arrow.getWeaponItem().is(net.minecraft.world.item.Items.CROSSBOW);
+            Long bowUntil = FULL_BOW_SHOTS.get(shooter.getUUID());
+            boolean fullBow = bowUntil != null && now < bowUntil;
+            if (!ActiveStates.diaosheActive(shooter.getUUID(), now) || !(crossbow || fullBow)) {
+                return;
+            }
+        } else if (cloneArrow) {
+            // 多重箭×吊射联动：克隆箭每根都是一次箭雨落点
+            if (!ActiveStates.diaosheActive(shooter.getUUID(), now)
+                || !ActiveStates.hasPassive(shooter.getUUID(), Card.DUOCHONG)) {
+                return;
+            }
+        } else {
+            return; // 雨箭等其他箭不触发
+        }
+        DiaoSheCard.markTriggered(arrow);
+        DiaoSheCard.spawnRain(shooter, center);
     }
 
     // ==================== 盲点：发光压制 ====================
@@ -870,10 +945,22 @@ public final class CardEvents {
             }
         }
 
+        // 吊射：雨箭固定 6 点伤害（下落加速会让 速度×基础伤害 超标）
+        if (event.getSource().getDirectEntity() instanceof Arrow rainArrow
+            && Boolean.TRUE.equals(rainArrow.getData(com.example.skillcards.data.CardState.RAIN_ARROW))) {
+            event.setNewDamage((float) CardConfig.DIAOSHE_ARROW_DAMAGE);
+        }
+
         // 灼烧：着火目标受到的火焰伤害每层 +1 点
         if (event.getSource().is(DamageTypeTags.IS_FIRE) && event.getEntity().isOnFire()) {
             int scorchLayers = GlobalEffects.scorchLayers(event.getEntity());
             if (scorchLayers > 0) {
+                if (CardConfig.DEBUG_LOGGING) {
+                    com.mojang.logging.LogUtils.getLogger().info(
+                        "[SkillCards][灼烧] {} 火焰伤害 {} + {} 层 = {}",
+                        event.getEntity().getName().getString(), event.getNewDamage(),
+                        scorchLayers, event.getNewDamage() + scorchLayers);
+                }
                 event.setNewDamage(event.getNewDamage() + scorchLayers);
             }
         }
@@ -929,8 +1016,8 @@ public final class CardEvents {
                     ActiveStates.setLastMelee(attacker.getUUID(), ActiveStates.now());
                 }
             }
-            // 背刺：攻击背对自身的玩家 → 1.5 倍
-            if (passives.contains(Card.BEISHI) && event.getEntity() instanceof ServerPlayer victim) {
+            // 背刺：攻击背对自身的实体 → 1.5 倍
+            if (passives.contains(Card.BEISHI) && event.getEntity() instanceof LivingEntity victim) {
                 Vec3 look = victim.getLookAngle();
                 Vec3 toAttacker = attacker.position().subtract(victim.position());
                 if (look.x * toAttacker.x + look.z * toAttacker.z < 0) {
@@ -1044,6 +1131,7 @@ public final class CardEvents {
 
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         ActiveStates.clearFor(event.getEntity().getUUID());
+        LAST_FX_SENT.remove(event.getEntity().getUUID());
     }
 
 }

@@ -37,7 +37,17 @@ public final class SkillCardsMod {
         NeoForge.EVENT_BUS.addListener(CardEvents::onArrowLoose);
         NeoForge.EVENT_BUS.addListener(CardEvents::onProjectileImpact);
         NeoForge.EVENT_BUS.addListener(com.example.skillcards.command.SkillCardsCommand::onRegisterCommands);
+        modEventBus.addListener(SkillCardsMod::onRegisterPayloads);
 
-        LOGGER.info("[SkillCards] 技能卡模组初始化完成（14 张卡）");
+        LOGGER.info("[SkillCards] 技能卡模组初始化完成（{} 张卡）", com.example.skillcards.registry.ModItems.all().size());
+    }
+
+    /** 全局效果层数同步包（S2C，供客户端 HUD 小字显示）。 */
+    private static void onRegisterPayloads(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {
+        var registrar = event.registrar("1");
+        registrar.playToClient(com.example.skillcards.network.GlobalFxPayload.TYPE,
+            com.example.skillcards.network.GlobalFxPayload.STREAM_CODEC,
+            (payload, context) -> context.enqueueWork(
+                () -> com.example.skillcards.network.GlobalFxState.receive(payload)));
     }
 }

@@ -79,12 +79,12 @@ public final class HuskarCard {
         }
     }
 
-    /** 攻击命中扣血（由 LivingDamageEvent.Post 调用）。 */
+    /** 攻击命中扣当前生命的 3%（由 LivingDamageEvent.Post 调用）。 */
     public static void payCost(ServerPlayer attacker) {
         float health = attacker.getHealth();
         if (health > CardConfig.HUSKAR_MIN_HEALTH) {
-            attacker.setHealth(Math.max(CardConfig.HUSKAR_MIN_HEALTH,
-                health - CardConfig.HUSKAR_ATTACK_COST));
+            float cost = Math.max(1.0F, health * (float) CardConfig.HUSKAR_ATTACK_COST_RATIO);
+            attacker.setHealth(Math.max(CardConfig.HUSKAR_MIN_HEALTH, health - cost));
         }
         if (attacker.level() instanceof ServerLevel level) {
             level.sendParticles(CardFx.RED, attacker.getX(), attacker.getY() + 1.0, attacker.getZ(),

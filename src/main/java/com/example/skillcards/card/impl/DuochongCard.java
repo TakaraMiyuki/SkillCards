@@ -29,7 +29,9 @@ public final class DuochongCard {
         Vec3 origin = original.position();
         Vec3 velocity = original.getDeltaMovement();
         for (int i = 0; i < CardConfig.DUOCHONG_EXTRA_ARROWS; i++) {
-            Arrow clone = new Arrow(EntityTypes.ARROW, level);
+            // 复制原箭的拾取物品栈（含药水箭矢的 POTION_CONTENTS）→ 克隆同为药水箭
+            Arrow clone = new Arrow(level, shooter, original.getPickupItemStackOrigin(), null);
+            clone.setData(com.example.skillcards.data.CardState.DUOCHONG_CLONE, true);
             clone.setOwner(shooter);
             clone.snapTo(origin.x, origin.y, origin.z, original.getYRot(), original.getXRot());
             // 绕 Y 轴 ±8° 旋转出散布

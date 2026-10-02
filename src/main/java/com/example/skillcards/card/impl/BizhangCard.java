@@ -6,7 +6,11 @@ import com.example.skillcards.card.CardFx;
 import com.example.skillcards.registry.Card;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 /**
  * 莫尔迪基安的臂章：临时扣除 80% 当前生命值，期间内获得等价的伤害吸收，持续 6 秒；
@@ -14,6 +18,9 @@ import net.minecraft.sounds.SoundEvents;
  */
 public final class BizhangCard {
     private BizhangCard() {}
+
+    public static final Identifier MAX_ABSORPTION_ID =
+        Identifier.fromNamespaceAndPath("skillcards", "bizhang_max_absorption");
 
     public static boolean activate(ServerPlayer player) {
         float health = player.getHealth();
@@ -23,7 +30,14 @@ public final class BizhangCard {
             return false;
         }
         player.setHealth(health - deducted);
-        player.setAbsorptionAmount(player.getAbsorptionAmount() + deducted);
+        // 26.2 吸收值受 MAX_ABSORPTION 属性上限钳制（基础 0），必须先抬高上限
+        AttributeInstance maxAbsorption = player.getAttribute(Attributes.MAX_ABSORPTION);
+        if (maxAbsorption != null) {
+            maxAbsorption.removeModifier(MAX_ABSORPTION_ID);
+            maxAbsorption.addTransientModifier(new AttributeModifier(MAX_ABSORPTION_ID,
+                deducted, AttributeModifier.Operation.ADD_VALUE));
+        }
+        player.setAbsorptionAmount(deducted);
         ActiveStates.setBizhang(player.getUUID(), new ActiveStates.Bracer(deducted,
             ActiveStates.now() + CardConfig.BIZHANG_DURATION_TICKS));
         ActiveStates.scheduleEndHint(player.getUUID(), Card.BIZHANG,
@@ -37,9 +51,12 @@ public final class BizhangCard {
         return true;
     }
 
-    /** 6 秒结束：移除等量吸收并返还扣除的生命值（由每刻扫描调用）。 */
+    /** 6 秒结束：移除上限修饰符（吸收值随之归零）并返还扣除的生命值（由每刻扫描调用）。 */
     public static void restore(ServerPlayer player, float deducted) {
-        player.setAbsorptionAmount(Math.max(0.0F, player.getAbsorptionAmount() - deducted));
+        AttributeInstance maxAbsorption = player.getAttribute(Attributes.MAX_ABSORPTION);
+        if (maxAbsorption != null) {
+            maxAbsorption.removeModifier(MAX_ABSORPTION_ID);
+        }
         player.setHealth(Math.min(player.getMaxHealth(), player.getHealth() + deducted));
         if (player.level() instanceof ServerLevel level) {
             CardFx.burst(level, CardFx.frontPos(player).x, CardFx.frontPos(player).y,

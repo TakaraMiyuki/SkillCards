@@ -18,11 +18,12 @@ public final class FeiXueCard {
         return false;
     }
 
-    /** 攻击命中结算（由 CardEvents#onDamagePost 调用）。 */
+    /** 攻击命中结算（由 CardEvents#onDamagePost 调用）：损失当前生命的 3%。 */
     public static void payAndIgnite(ServerPlayer attacker, net.minecraft.world.entity.LivingEntity target) {
         float health = attacker.getHealth();
         if (health > 1.0F) {
-            attacker.setHealth(Math.max(1.0F, health - 2.0F));
+            float cost = Math.max(1.0F, health * 0.03F);
+            attacker.setHealth(Math.max(1.0F, health - cost));
         }
         target.igniteForSeconds(CardConfig.FEIXUE_FIRE_SECONDS);
         if (GlobalEffects.scorchLayers(target) == 0) {

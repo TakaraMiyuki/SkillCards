@@ -4,6 +4,7 @@ import com.example.skillcards.CardConfig;
 import com.example.skillcards.card.ActiveStates;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -24,6 +25,12 @@ import java.util.UUID;
 public final class GlobalEffects {
     private GlobalEffects() {}
 
+    private static void log(String format, Object... args) {
+        if (CardConfig.DEBUG_LOGGING) {
+            com.mojang.logging.LogUtils.getLogger().info("[SkillCards][灼烧] " + format, args);
+        }
+    }
+
     public static final Identifier DANCE_ATTR_ID =
         Identifier.fromNamespaceAndPath("skillcards", "sword_dance");
 
@@ -42,10 +49,13 @@ public final class GlobalEffects {
         int newLayers = Math.max(0, Math.min(CardConfig.SCORCH_MAX_LAYERS, (cur == null ? 0 : cur.layers()) + layers));
         if (newLayers == 0) {
             map.remove(target.getUUID());
+            log("清除 {} 的灼烧（原 {} 层）", target.getName().getString(), cur == null ? 0 : cur.layers());
             return;
         }
         long nextStack = cur == null ? now + CardConfig.SCORCH_STACK_INTERVAL_TICKS : cur.nextStackTick();
         map.put(target.getUUID(), new Scorch(newLayers, nextStack, now + CardConfig.SCORCH_WINDOW_AFTER_FIRE_TICKS));
+        log("{} 灼烧 {}→{} 层（下次自动叠层:{} 刻后）", target.getName().getString(),
+            cur == null ? 0 : cur.layers(), newLayers, nextStack - now);
     }
 
     /** 目标当前灼烧层数（仅当目标正在着火时提供增伤）。 */
@@ -67,12 +77,21 @@ public final class GlobalEffects {
             Scorch scorch = entry.getValue();
             if (entity == null || now >= scorch.windowEnd()) {
                 iterator.remove();
+                log("灼烧到期移除（实体在线:{}）", entity != null);
                 continue;
             }
             if (entity.isOnFire() && now >= scorch.nextStackTick()) {
                 int layers = Math.min(CardConfig.SCORCH_MAX_LAYERS, scorch.layers() + 1);
                 entry.setValue(new Scorch(layers, now + CardConfig.SCORCH_STACK_INTERVAL_TICKS,
                     now + CardConfig.SCORCH_WINDOW_AFTER_FIRE_TICKS));
+                log("{} 着火自动叠层 → {} 层", entity.getName().getString(), layers);
+            }
+            // 灼烧可见化：层数越多，着火实体身上的火苗越密
+            if (entity.isOnFire() && scorch.layers() > 0 && now % 10 == 0
+                && entity.level() instanceof ServerLevel scorchLevel) {
+                scorchLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME,
+                    entity.getX(), entity.getY() + entity.getBbHeight() * 0.6, entity.getZ(),
+                    scorch.layers() * 3, 0.3, 0.4, 0.3, 0.01);
             }
         }
     }
@@ -88,7 +107,7 @@ public final class GlobalEffects {
 
     // ==================== 剑舞 ====================
 
-    public record Dance(int layers, long expiry) {}
+    public record Dance(int layers, long nextDecayTick) {}
 
     /** 狂剑层数与最近一次剑舞叠加时刻。 */
     public record Kuangwu(int layers, long lastStack) {}
@@ -102,7 +121,7 @@ public final class GlobalEffects {
         var map = ActiveStates.swordDance();
         Dance cur = map.get(player.getUUID());
         int newLayers = Math.min(CardConfig.DANCE_MAX_LAYERS, (cur == null ? 0 : cur.layers()) + layers);
-        map.put(player.getUUID(), new Dance(newLayers, now + CardConfig.DANCE_DURATION_TICKS));
+        map.put(player.getUUID(), new Dance(newLayers, now + CardConfig.DANCE_DECAY_INTERVAL_TICKS));
         updateDanceAttr(player, newLayers);
     }
 
@@ -116,23 +135,33 @@ public final class GlobalEffects {
         var map = ActiveStates.swordDance();
         Dance cur = map.get(player.getUUID());
         if (cur != null && cur.layers() >= per) {
-            map.put(player.getUUID(), new Dance(cur.layers() - per, cur.expiry()));
+            map.put(player.getUUID(), new Dance(cur.layers() - per, cur.nextDecayTick()));
             updateDanceAttr(player, cur.layers() - per);
             return true;
         }
         return false;
     }
 
-    /** 剑舞到期清空；攻速属性随之归零。 */
+    /** 剑舞推进：每 3 秒未再次叠加只掉 1 层；归零后移除。 */
     public static void tickDance(long now) {
         var iterator = ActiveStates.swordDance().entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            if (now >= entry.getValue().expiry()) {
+            Dance dance = entry.getValue();
+            if (now < dance.nextDecayTick()) {
+                continue;
+            }
+            int layers = Math.max(0, dance.layers() - 1);
+            ServerPlayer player = ActiveStates.player(entry.getKey());
+            if (layers == 0) {
                 iterator.remove();
-                ServerPlayer player = ActiveStates.player(entry.getKey());
                 if (player != null) {
                     updateDanceAttr(player, 0);
+                }
+            } else {
+                entry.setValue(new Dance(layers, now + CardConfig.DANCE_DECAY_INTERVAL_TICKS));
+                if (player != null) {
+                    updateDanceAttr(player, layers);
                 }
             }
         }

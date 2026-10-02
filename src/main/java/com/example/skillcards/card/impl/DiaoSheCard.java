@@ -21,6 +21,20 @@ import net.minecraft.util.RandomSource;
 public final class DiaoSheCard {
     private DiaoSheCard() {}
 
+    /** 已触发过箭雨的箭（一根箭最多触发一场：命中实体后落地不再重复）。 */
+    private static final java.util.Set<java.util.UUID> TRIGGERED = new java.util.HashSet<>();
+
+    public static boolean alreadyTriggered(Arrow arrow) {
+        return TRIGGERED.contains(arrow.getUUID());
+    }
+
+    public static void markTriggered(Arrow arrow) {
+        TRIGGERED.add(arrow.getUUID());
+        if (TRIGGERED.size() > 200) { // 粗略防泄漏
+            TRIGGERED.clear();
+        }
+    }
+
     public static boolean activate(ServerPlayer player) {
         ActiveStates.setDiaosheWindow(player.getUUID(), ActiveStates.now() + CardConfig.DIAOSHE_WINDOW_TICKS);
         ServerLevel level = player.level();
@@ -53,6 +67,7 @@ public final class DiaoSheCard {
         arrow.snapTo(x, y, z, random.nextFloat() * 360.0F, 0.0F);
         arrow.setDeltaMovement((random.nextDouble() - 0.5) * 0.1, -1.5, (random.nextDouble() - 0.5) * 0.1);
         arrow.setBaseDamage((float) CardConfig.DIAOSHE_ARROW_DAMAGE);
+        arrow.setData(com.example.skillcards.data.CardState.RAIN_ARROW, true);
         arrow.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
         level.addFreshEntity(arrow);
     }

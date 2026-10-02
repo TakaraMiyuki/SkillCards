@@ -126,7 +126,7 @@ public final class CardConfig {
 
     // ==================== 哈斯卡之狂战 ====================
     public static final int HUSKAR_DURATION_TICKS = 60 * 20;
-    public static final float HUSKAR_ATTACK_COST = 2.0F;   // 每次攻击命中损失的生命
+    public static final double HUSKAR_ATTACK_COST_RATIO = 0.03; // 每次攻击命中损失当前生命的3%
     public static final float HUSKAR_MIN_HEALTH = 1.0F;    // 卖血下限
     public static final int HUSKAR_SWEEP_INTERVAL_TICKS = 10;
 
@@ -148,6 +148,7 @@ public final class CardConfig {
     public static final int GUOZAI_AFTER_SLOWNESS_TICKS = 10 * 20;
 
     // ==================== 全局效果：灼烧 ====================
+    public static final boolean DEBUG_LOGGING = true; // 排障用：输出灼烧/狂剑/燃火的层数变化日志（latest.log）
     public static final int SCORCH_MAX_LAYERS = 5;
     public static final int SCORCH_STACK_INTERVAL_TICKS = 60;      // 着火时每3秒自动+1层
     public static final int SCORCH_WINDOW_AFTER_FIRE_TICKS = 60;   // 火熄灭后再存续3秒
@@ -155,7 +156,9 @@ public final class CardConfig {
     // ==================== 全局效果：剑舞 ====================
     public static final int DANCE_MAX_LAYERS = 20;
     public static final double DANCE_SPEED_PER_LAYER = 0.03;       // 每层+3%近战攻速
-    public static final int DANCE_DURATION_TICKS = 60;             // 每次叠加后存续3秒
+    public static final int DANCE_DECAY_INTERVAL_TICKS = 60;       // 每3秒未叠加掉1层
+    public static final int KUANGJIAN_MAX_LAYERS = 5;              // 狂剑上限5层
+    public static final int KUANGWU_CLEAR_TICKS_OLD = 30;          // （已废弃占位）
 
     // ==================== 被动卡 ====================
     public static final int GONGSHI_DAMAGE_PER_LEVEL = 2;  // 攻势：每级迅捷+2点
@@ -177,12 +180,13 @@ public final class CardConfig {
     public static final int GUIREN_DURATION_TICKS = 30 * 20;
     public static final int GUIREN_INSTANT_LAYERS = 12;
     public static final int FEIXUE_FIRE_SECONDS = 4;
-    public static final int KUANGWU_CLEAR_TICKS = 30;        // 1.5秒没叠剑舞清空狂剑
+    public static final int KUANGWU_CLEAR_TICKS = 60;        // 3秒没叠剑舞清空狂剑
     public static final int KUANGWU_DANCE_PER_CONVERT = 4;   // 每4层剑舞换1层狂剑
 
     // ==================== 燃火 / 臂章 / 吊射 ====================
-    public static final double RANHUO_RADIUS = 3.0;
-    public static final int RANHUO_FIRE_SECONDS = 10;
+    public static final double RANHUO_LENGTH = 4.0;  // 目视方向前方长度（格）
+    public static final double RANHUO_HALF_WIDTH = 1.5; // 左右各1.5格（总宽3）
+    public static final int RANHUO_FIRE_SECONDS = 8;
     public static final int RANHUO_SCORCH_CONVERT_DAMAGE = 6; // 每层灼烧转换的火焰伤害
     public static final double BIZHANG_RATIO = 0.8;          // 臂章：扣除80%生命
     public static final int BIZHANG_DURATION_TICKS = 6 * 20;
@@ -191,7 +195,11 @@ public final class CardConfig {
     public static final int DIAOSHE_RAIN_INTERVAL_TICKS = 4;
     public static final double DIAOSHE_ARROW_DAMAGE = 6.0;
     public static final int DIAOSHE_RAIN_HEIGHT = 20;
-    public static final double DIAOSHE_HALF_AREA = 1.0;      // 3×3 半宽1格
+    public static final double DIAOSHE_HALF_AREA = 2.0;      // 5×5 半宽2格
+
+    // ==================== HUD 显示位置（全局效果小字） ====================
+    public static final int HUD_X_OFFSET = 0;   // 水平偏移（0=屏幕居中，正值向右）
+    public static final int HUD_Y_OFFSET = 46;  // 距屏幕底部的高度（46≈物品栏正上方）
 
     // ==================== 通用 ====================
     public static final double PARTICLE_FRONT_OFFSET = 0.5; // 全体粒子释放位置向玩家身前偏移（半身位）

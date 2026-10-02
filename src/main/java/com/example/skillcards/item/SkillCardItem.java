@@ -59,7 +59,8 @@ public class SkillCardItem extends Item {
             return InteractionResult.FAIL;
         }
         boolean used = card().activate(serverPlayer);
-        if (used) {
+        // 亚丝缇的赐福：传送成功才进入冷却（蓄力阶段失败可原价重试）
+        if (used && !card().deferredCooldown()) {
             serverPlayer.getCooldowns().addCooldown(stack, card().cooldownTicks());
         }
         return used ? InteractionResult.SUCCESS : InteractionResult.FAIL;
@@ -84,9 +85,20 @@ public class SkillCardItem extends Item {
         if (shiftDown()) {
             tooltip.accept(Component.empty());
             tooltip.accept(colored(Component.translatable(base + ".desc"), 0xAAAAAA));
+        for (String global : card().linkedGlobals()) {
+            tooltip.accept(colored(Component.translatable("global.skillcards." + global), 0x7FDFFF));
+        }
         } else {
             tooltip.accept(colored(Component.translatable("item.skillcards.shift_hint"), 0x555555));
         }
+    }
+
+    /** 成功后才结算冷却的卡（延迟结算型）。 */
+    public static void applyCooldown(ServerPlayer player, com.example.skillcards.registry.Card card) {
+        player.getCooldowns().addCooldown(
+            net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(
+                com.example.skillcards.registry.ModItems.itemOf(card)),
+            card.cooldownTicks());
     }
 
     private String cooldownText() {

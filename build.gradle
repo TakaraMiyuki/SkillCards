@@ -39,12 +39,12 @@ neoForge {
 
 dependencies {
     // 联动 Manhunt（猎人判定 / 追踪罗盘干扰）：编译期依赖其 0.1.1 jar，运行期按 toml 声明可选加载
-    implementation files("${rootDir}/../Manhunt/build/libs/manhunt-0.3.2-beta.jar")
+    implementation files("libs/manhunt.jar") // Manhunt 联动：接口变更时用新构建产物替换此 jar
     // 联动 Curios（被动卡饰品栏扫描）：仅编译期，运行期按 ModList 可选加载
-    compileOnly files("${rootDir}/../Manhunt/libs/curios-neoforge-16.0.0+26.2.jar")
+    compileOnly files("libs/curios.jar") // Curios 被动饰品栏扫描
     // 联动 飞翔 Flying（海王之翼使用其 flying_enchant:flying 状态效果）：
     // 代码仅做注册表查找不引用其类，加入编译/开发运行时是为了冒烟测试能在开发环境验证联动
-    implementation files("${rootDir}/../Flying/build/libs/flying_enchant-1.2.0.jar")
+    implementation files("libs/flying.jar") // 海王之翼联动（仅开发运行时验证用）
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

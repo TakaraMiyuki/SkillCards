@@ -20,17 +20,28 @@ public final class KuangwuCard {
 
     /** 近战命中时的叠层与转换（由 CardEvents#onDamagePost 调用）。 */
     public static void onMeleeHit(ServerPlayer player) {
-        GlobalEffects.addDance(player, 1);
-        var state = ActiveStates.kuangwuState().get(player.getUUID());
         long now = ActiveStates.now();
-        if (state == null || now - state.lastStack() >= CardConfig.KUANGWU_CLEAR_TICKS) {
+        // 1.5 秒没有叠加剑舞 → 先清空狂剑，再重新叠层
+        var stale = ActiveStates.kuangwuState().get(player.getUUID());
+        if (stale != null && now - stale.lastStack() >= CardConfig.KUANGWU_CLEAR_TICKS) {
             ActiveStates.kuangwuState().remove(player.getUUID());
         }
+        GlobalEffects.addDance(player, 1);
+        // 每 4 层剑舞 → 1 层狂剑（上限 5 层），并清空剑舞
         while (GlobalEffects.tryConvertDance(player, CardConfig.KUANGWU_DANCE_PER_CONVERT)) {
             var cur = ActiveStates.kuangwuState().getOrDefault(player.getUUID(),
                 new GlobalEffects.Kuangwu(0, now));
-            ActiveStates.kuangwuState().put(player.getUUID(),
-                new GlobalEffects.Kuangwu(cur.layers() + 1, now));
+            if (cur.layers() < CardConfig.KUANGJIAN_MAX_LAYERS) {
+                ActiveStates.kuangwuState().put(player.getUUID(),
+                    new GlobalEffects.Kuangwu(cur.layers() + 1, now));
+                if (CardConfig.DEBUG_LOGGING) {
+                    com.mojang.logging.LogUtils.getLogger().info(
+                        "[SkillCards][狂舞] 剑舞4层 → 狂剑 {} 层", cur.layers() + 1);
+                }
+            } else {
+                ActiveStates.kuangwuState().put(player.getUUID(),
+                    new GlobalEffects.Kuangwu(cur.layers(), now));
+            }
         }
     }
 
