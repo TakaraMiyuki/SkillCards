@@ -33,6 +33,8 @@ public final class DuochongCard {
             Arrow clone = new Arrow(level, shooter, original.getPickupItemStackOrigin(), null);
             clone.setData(com.example.skillcards.data.CardState.DUOCHONG_CLONE, true);
             clone.setOwner(shooter);
+            // 继承原箭的暴击标记：拉满弓/弩射出的原箭会沿轨迹撒 crit 粒子（拖尾），复制箭需保持一致
+            clone.setCritArrow(original.isCritArrow());
             clone.snapTo(origin.x, origin.y, origin.z, original.getYRot(), original.getXRot());
             // 绕 Y 轴 ±8° 旋转出散布
             double angle = (i == 0 ? 1 : -1) * CardConfig.DUOCHONG_SPREAD;

@@ -145,6 +145,7 @@ public final class CardEvents {
         tickQinglong(now);
         tickGuozai(now);
         tickPassives(server, now);
+        tickEsha(server, now);
         GlobalEffects.tickScorch(now);
         GlobalEffects.tickDance(now);
         tickBizhang(now);
@@ -586,7 +587,8 @@ public final class CardEvents {
             var firstSeen = ActiveStates.falunFirst().computeIfAbsent(player.getUUID(), k -> new java.util.HashMap<>());
             var adapted = ActiveStates.falunAdapted(player.getUUID());
             java.util.Set<Holder<MobEffect>> active = new java.util.HashSet<>();
-            for (var instance : player.getActiveEffects()) {
+            // 遍历快照：下方会 removeEffect，直接迭代活的效果表会抛 ConcurrentModificationException 并使服务端 tick 崩溃
+            for (var instance : new java.util.ArrayList<>(player.getActiveEffects())) {
                 if (instance.getEffect().value().getCategory() != MobEffectCategory.HARMFUL) {
                     continue;
                 }
